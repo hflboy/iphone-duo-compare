@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#03060c">
+<meta name="description" content="iPhone Duo 交互式 3D 拆解可视化 · 25 个程序化部件 · Three.js">
+<title>iPhone Duo · Teardown Lab</title>
+<style>
+:root{
+  --bg:#03060c;
+  --panel:rgba(7,13,22,.76);
+  --panel-solid:#080e18;
+  --line:rgba(117,199,255,.15);
+  --line-strong:rgba(117,199,255,.32);
+  --cyan:#3fe6ff;
+  --pink:#ff4fd8;
+  --green:#7ef0b8;
+  --orange:#ffb066;
+  --text:#e6f3ff;
+  --muted:#7e93a8;
+  --dim:#53697d;
+  --mono:"SFMono-Regular",Consolas,"Liberation Mono",monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+  font-family:"Inter","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+body{position:relative}
+#stage{position:fixed;inset:0;z-index:0}
+#scene{display:block;width:100%;height:100%;touch-action:none;cursor:grab;outline:none}
+#scene.is-grabbing{cursor:grabbing}
+
+/* ---------- 覆盖层质感 ---------- */
+.vignette{position:fixed;inset:0;z-index:2;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 44%,transparent 48%,rgba(0,2,6,.52) 100%)}
+.scanline{position:fixed;inset:0;z-index:3;pointer-events:none;opacity:.35;
+  background:repeating-linear-gradient(to bottom,rgba(160,220,255,.028) 0 1px,transparent 1px 4px)}
+.top-glow{position:fixed;top:-140px;left:50%;transform:translateX(-50%);width:90vw;height:300px;z-index:2;pointer-events:none;
+  background:radial-gradient(ellipse at center,rgba(38,180,255,.12),transparent 65%)}
+
+/* ---------- 通用面板 ---------- */
+.panel{
+  background:linear-gradient(160deg,rgba(12,22,36,.86),rgba(5,10,18,.78));
+  border:1px solid var(--line);
+  border-radius:14px;
+  backdrop-filter:blur(18px) saturate(1.25);
+  -webkit-backdrop-filter:blur(18px) saturate(1.25);
+  box-shadow:0 18px 50px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.045);
+}
+.panel::before,.panel::after{content:"";position:absolute;width:9px;height:9px;pointer-events:none;opacity:.7}
+.panel::before{top:-1px;left:-1px;border-top:1px solid var(--cyan);border-left:1px solid var(--cyan);border-top-left-radius:6px}
+.panel::after{bottom:-1px;right:-1px;border-bottom:1px solid var(--cyan);border-right:1px solid var(--cyan);border-bottom-right-radius:6px}
+
+/* ---------- 顶栏 ---------- */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:20;display:flex;align-items:flex-start;justify-content:space-between;
+  padding:20px 26px 0;pointer-events:none;
+  background:linear-gradient(to bottom,rgba(3,6,12,.72),transparent)}
+.brand{display:flex;align-items:center;gap:14px}
+.brand-mark{width:40px;height:40px;border-radius:11px;position:relative;
+  border:1px solid rgba(63,230,255,.42);
+  background:linear-gradient(145deg,rgba(63,230,255,.16),rgba(9,20,34,.4));
+  box-shadow:0 0 24px rgba(63,230,255,.16),inset 0 0 18px rgba(63,230,255,.08)}
+.brand-mark span{position:absolute;top:9px;bottom:9px;width:8px;border:1px solid rgba(180,240,255,.85);border-radius:2px;
+  background:linear-gradient(180deg,rgba(63,230,255,.35),rgba(63,230,255,.05))}
+.brand-mark span:first-child{left:8px;transform:skewY(-8deg)}
+.brand-mark span:last-child{right:8px;transform:skewY(8deg)}
+.brand h1{font-size:24px;font-weight:700;letter-spacing:.02em;line-height:1;color:#f2fbff}
+.brand h1 em{font-style:normal;color:var(--cyan);text-shadow:0 0 22px rgba(63,230,255,.45)}
+.brand p{margin-top:7px;font-size:9.5px;letter-spacing:.34em;color:var(--muted);font-family:var(--mono)}
+.meta{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;pointer-events:auto}
+.badge{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:8px;font-size:9.5px;
+  letter-spacing:.16em;font-family:var(--mono);color:#a9c6da;
+  border:1px solid var(--line);background:rgba(7,13,22,.66);backdrop-filter:blur(10px)}
+.badge b{color:var(--cyan);font-weight:600}
+.badge i{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);font-style:normal}
+.badge.alt i{background:var(--pink);box-shadow:0 0 8px var(--pink)}
+.badge.alt{color:#e7bfe0}
+
+/* ---------- 部件面板 ---------- */
+.parts-panel{position:fixed;z-index:12;top:98px;right:26px;width:292px;max-height:calc(100vh - 270px);
+  display:flex;flex-direction:column;overflow:hidden;padding:0}
+.panel-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 11px;
+  border-bottom:1px solid var(--line);flex:0 0 auto}
+.panel-head span{font-size:10px;letter-spacing:.3em;color:var(--muted);font-family:var(--mono)}
+.panel-head b{font-size:11px;color:var(--cyan);font-family:var(--mono);border:1px solid rgba(63,230,255,.28);
+  border-radius:20px;padding:2px 9px;font-weight:500}
+.parts-list{overflow-y:auto;padding:6px 8px 10px;overscroll-behavior:contain}
+.parts-list::-webkit-scrollbar{width:4px}
+.parts-list::-webkit-scrollbar-track{background:transparent}
+.parts-list::-webkit-scrollbar-thumb{background:rgba(63,230,255,.28);border-radius:4px}
+.pl-cat{display:flex;align-items:center;justify-content:space-between;padding:10px 8px 5px;
+  font-size:9px;letter-spacing:.28em;color:var(--dim);font-family:var(--mono)}
+.pl-cat i{font-style:normal;opacity:.7}
+.pl-item{width:100%;display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:7px;
+  background:transparent;border:1px solid transparent;color:#c7dbea;text-align:left;cursor:pointer;
+  font-size:11.5px;font-family:inherit;transition:background .16s,border-color .16s,color .16s;position:relative}
+.pl-item:hover{background:rgba(63,230,255,.07);border-color:rgba(63,230,255,.16)}
+.pl-item.active{background:linear-gradient(90deg,rgba(63,230,255,.15),rgba(63,230,255,.03));
+  border-color:rgba(63,230,255,.36);color:#eafcff;box-shadow:inset 2px 0 0 var(--cyan)}
+.pl-idx{font-family:var(--mono);font-size:9.5px;color:var(--dim);flex:0 0 17px}
+.pl-dot{width:5px;height:5px;border-radius:50%;flex:0 0 5px;box-shadow:0 0 7px currentColor}
+.pl-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl-cat-tag{font-size:8.5px;color:var(--dim);border:1px solid rgba(126,147,168,.18);border-radius:3px;padding:1px 4px;flex:0 0 auto}
+
+/* ---------- 部件信息 ---------- */
+.info-panel{position:fixed;z-index:12;left:26px;top:98px;width:330px;max-height:calc(100vh - 300px);
+  padding:18px 20px 16px;overflow-y:auto;opacity:0;transform:translateY(-10px);
+  pointer-events:none;transition:opacity .3s,transform .3s;border-color:rgba(63,230,255,.24)}
+.info-panel.show{opacity:1;transform:none;pointer-events:auto}
+.info-panel::-webkit-scrollbar{width:4px}
+.info-panel::-webkit-scrollbar-thumb{background:rgba(63,230,255,.28);border-radius:4px}
+.ip-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+#ipCat{font-size:9px;letter-spacing:.24em;font-family:var(--mono);border:1px solid currentColor;
+  border-radius:20px;padding:3px 9px;opacity:.9}
+#ipEn{font-size:8.5px;letter-spacing:.14em;color:var(--dim);font-family:var(--mono);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
+#ipName{font-size:19px;font-weight:650;letter-spacing:.01em;margin:0 0 8px;color:#f0faff;
+  text-shadow:0 0 22px rgba(63,230,255,.22)}
+.ip-specs{font-size:11px;line-height:1.7;color:var(--cyan);font-family:var(--mono);
+  border-left:2px solid rgba(63,230,255,.35);padding-left:10px;margin-bottom:12px}
+.ip-desc{font-size:12.5px;line-height:1.85;color:#a9bfd2;letter-spacing:.01em}
+.ip-foot{margin-top:16px;padding-top:11px;border-top:1px dashed rgba(117,199,255,.14);
+  font-size:8.5px;letter-spacing:.14em;color:var(--dim);font-family:var(--mono)}
+#ipClose{position:absolute;top:10px;right:10px;width:24px;height:24px;border-radius:6px;
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);color:var(--muted);
+  cursor:pointer;font-size:15px;line-height:20px;transition:.18s}
+#ipClose:hover{color:var(--cyan);border-color:rgba(63,230,255,.4)}
+
+/* ---------- 控制坞 ---------- */
+.dock{position:fixed;z-index:15;left:50%;bottom:18px;transform:translateX(-50%);
+  width:min(940px,calc(100vw - 48px));padding:12px 16px 9px;
+  background:linear-gradient(160deg,rgba(10,19,32,.88),rgba(4,9,16,.82));
+  border:1px solid var(--line);border-radius:14px;
+  backdrop-filter:blur(20px) saturate(1.3);-webkit-backdrop-filter:blur(20px) saturate(1.3);
+  box-shadow:0 22px 60px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.05)}
+.dock-main{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+.btn{height:38px;padding:0 13px;border-radius:9px;display:inline-flex;align-items:center;gap:7px;
+  border:1px solid rgba(117,199,255,.18);background:rgba(13,24,38,.6);color:#c4dcee;
+  font-family:inherit;font-size:11.5px;letter-spacing:.06em;cursor:pointer;transition:.18s;white-space:nowrap}
+.btn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+.btn:hover{border-color:rgba(63,230,255,.45);color:#e9fcff;box-shadow:0 0 18px rgba(63,230,255,.14);transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.btn.primary{color:#eafcff;border-color:rgba(63,230,255,.42);
+  background:linear-gradient(135deg,rgba(63,230,255,.18),rgba(38,110,255,.1));
+  box-shadow:0 0 22px rgba(63,230,255,.12),inset 0 0 18px rgba(63,230,255,.05)}
+.btn.active{border-color:rgba(63,230,255,.72);color:#8ff4ff;
+  background:linear-gradient(135deg,rgba(63,230,255,.25),rgba(63,90,255,.14));
+  box-shadow:0 0 24px rgba(63,230,255,.28),inset 0 0 16px rgba(63,230,255,.1)}
+.btn.auto.active{border-color:rgba(255,79,216,.6);color:#ffc8f2;
+  background:linear-gradient(135deg,rgba(255,79,216,.2),rgba(120,40,255,.1));
+  box-shadow:0 0 24px rgba(255,79,216,.26)}
+.dock-slider{display:flex;align-items:center;gap:12px;margin-top:9px;padding-top:8px;
+  border-top:1px solid rgba(117,199,255,.1)}
+.dock-slider label{font-size:9px;letter-spacing:.2em;color:var(--dim);font-family:var(--mono);flex:0 0 auto}
+#explodeSlider{-webkit-appearance:none;appearance:none;width:100%;height:3px;border-radius:3px;
+  background:linear-gradient(90deg,rgba(63,230,255,.85),rgba(255,79,216,.6));outline:none;cursor:pointer;flex:1}
+#explodeSlider::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;
+  background:#dffbff;border:2px solid var(--cyan);box-shadow:0 0 12px rgba(63,230,255,.9);cursor:grab}
+#explodeSlider::-moz-range-thumb{width:11px;height:11px;border:2px solid var(--cyan);border-radius:50%;
+  background:#dffbff;box-shadow:0 0 12px rgba(63,230,255,.9)}
+#sliderVal{font-family:var(--mono);font-size:10px;color:var(--cyan);width:36px;text-align:right;flex:0 0 auto}
+.dock-hint{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:14px;
+  margin-top:7px;font-size:8.5px;color:var(--dim);letter-spacing:.05em;font-family:var(--mono)}
+.dock-hint span{display:flex;align-items:center;gap:5px}
+.dock-hint kbd{font-family:var(--mono);font-size:8px;border:1px solid rgba(126,147,168,.28);
+  border-radius:3px;padding:1px 4px;color:#93aabd;background:rgba(255,255,255,.03)}
+
+/* ---------- HUD / 右下 ---------- */
+.hud{position:fixed;z-index:10;right:26px;bottom:22px;display:flex;gap:16px;align-items:flex-end;
+  font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--dim);pointer-events:none;text-align:right}
+.hud b{display:block;font-size:14px;color:#bcecff;font-weight:500;letter-spacing:.04em;margin-bottom:2px}
+.hud .state b{color:var(--cyan);font-size:10px;letter-spacing:.18em}
+.footnote{position:fixed;z-index:10;left:26px;bottom:22px;font-family:var(--mono);font-size:8.5px;
+  letter-spacing:.12em;color:#3f5265;line-height:1.8;pointer-events:none}
+.footnote b{color:#6e8ba3;font-weight:400}
+
+/* ---------- 工具提示 ---------- */
+.tooltip{position:fixed;z-index:40;top:0;left:0;pointer-events:none;padding:8px 12px;border-radius:8px;
+  background:rgba(6,12,22,.92);border:1px solid rgba(63,230,255,.28);
+  box-shadow:0 10px 30px rgba(0,0,0,.45);white-space:nowrap;transition:opacity .12s}
+.tooltip b{display:block;font-size:11.5px;color:#e9fcff;font-weight:600}
+.tooltip span{display:block;margin-top:2px;font-family:var(--mono);font-size:8px;letter-spacing:.1em;color:var(--dim)}
+.tooltip.hidden{opacity:0;visibility:hidden}
+
+/* ---------- Toast ---------- */
+#toast{position:fixed;z-index:45;top:92px;left:50%;transform:translate(-50%,-10px);
+  padding:9px 18px;border-radius:8px;background:rgba(7,14,24,.92);border:1px solid rgba(63,230,255,.3);
+  color:#c9f4ff;font-size:11px;letter-spacing:.08em;opacity:0;pointer-events:none;
+  transition:opacity .25s,transform .25s;font-family:var(--mono);box-shadow:0 12px 40px rgba(0,0,0,.45)}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* ---------- 移动端部件开关 ---------- */
+.parts-toggle{display:none;position:fixed;z-index:22;top:78px;right:16px;height:32px;padding:0 12px;
+  border-radius:8px;border:1px solid var(--line-strong);background:rgba(8,15,25,.88);
+  color:var(--cyan);font-size:10px;letter-spacing:.18em;font-family:var(--mono);cursor:pointer}
+
+/* ---------- 加载页 ---------- */
+#loading{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at 50% 40%,#08131f 0%,#03060c 58%,#010204 100%);
+  transition:opacity .5s,visibility .5s}
+#loading.hidden{opacity:0;visibility:hidden}
+.load-inner{width:min(420px,84vw);text-align:center;position:relative}
+.load-logo{width:66px;height:66px;margin:0 auto 22px;border-radius:16px;position:relative;
+  border:1px solid rgba(63,230,255,.4);background:linear-gradient(160deg,rgba(63,230,255,.12),rgba(8,20,34,.5));
+  box-shadow:0 0 60px rgba(63,230,255,.16),inset 0 0 28px rgba(63,230,255,.08);animation:pulse 2.6s ease-in-out infinite}
+.load-logo span{position:absolute;top:17px;bottom:17px;width:12px;border:1px solid rgba(180,244,255,.9);
+  border-radius:2px;background:linear-gradient(180deg,rgba(63,230,255,.4),rgba(63,230,255,.06))}
+.load-logo span:first-child{left:15px;transform:skewY(-9deg)}
+.load-logo span:last-child{right:15px;transform:skewY(9deg)}
+@keyframes pulse{0%,100%{box-shadow:0 0 40px rgba(63,230,255,.12),inset 0 0 20px rgba(63,230,255,.06)}
+  50%{box-shadow:0 0 80px rgba(63,230,255,.28),inset 0 0 34px rgba(63,230,255,.12)}}
+.load-title{font-size:23px;font-weight:650;letter-spacing:.04em;color:#f0fbff}
+.load-title i{font-style:normal;color:var(--cyan);text-shadow:0 0 26px rgba(63,230,255,.55)}
+.load-sub{margin-top:8px;font-family:var(--mono);font-size:8.5px;letter-spacing:.32em;color:#546b7f}
+.load-track{height:2px;background:rgba(117,199,255,.12);border-radius:2px;margin:34px 0 12px;overflow:hidden}
+#loadBar{height:100%;width:4%;border-radius:2px;background:linear-gradient(90deg,#1a7fa8,#3fe6ff 60%,#ff4fd8);
+  box-shadow:0 0 14px rgba(63,230,255,.6);transition:width .35s ease}
+.load-row{display:flex;align-items:center;justify-content:space-between;font-family:var(--mono);
+  font-size:9px;letter-spacing:.14em;color:#6f8799}
+.load-row b{color:var(--cyan);font-weight:400}
+#loadHint{margin-top:18px;font-size:9.5px;letter-spacing:.1em;color:#3f5265;line-height:1.7}
+#loading.failed #loadBar{background:linear-gradient(90deg,#7a1f2a,#ff5a7a);box-shadow:0 0 14px rgba(255,90,122,.5)}
+#loading.failed #loadStatus{color:#ff9fb2}
+
+/* ---------- 导出弹窗 ---------- */
+.modal{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;
+  background:rgba(2,5,10,.72);backdrop-filter:blur(8px);padding:24px}
+.modal.hidden{display:none}
+.modal-card{width:min(760px,100%);max-height:84vh;display:flex;flex-direction:column;
+  background:linear-gradient(160deg,#0a1523,#050a12);border:1px solid rgba(63,230,255,.24);
+  border-radius:14px;box-shadow:0 40px 120px rgba(0,0,0,.65);overflow:hidden}
+.modal-head{display:flex;align-items:flex-start;justify-content:space-between;padding:18px 22px;
+  border-bottom:1px solid rgba(117,199,255,.12)}
+.modal-head h2{font-size:16px;font-weight:600;letter-spacing:.04em}
+.modal-head p{margin-top:5px;font-family:var(--mono);font-size:8.5px;letter-spacing:.16em;color:var(--dim)}
+#modalClose{background:none;border:1px solid rgba(255,255,255,.08);color:var(--muted);width:28px;height:28px;
+  border-radius:7px;font-size:17px;cursor:pointer;line-height:22px}
+#modalClose:hover{color:var(--cyan);border-color:rgba(63,230,255,.4)}
+#modalJson{flex:1;overflow:auto;margin:0;padding:18px 22px;font-family:var(--mono);font-size:10.5px;
+  line-height:1.7;color:#9fdcf2;background:rgba(3,8,14,.6);white-space:pre;tab-size:2}
+#modalJson::-webkit-scrollbar{width:6px;height:6px}
+#modalJson::-webkit-scrollbar-thumb{background:rgba(63,230,255,.25);border-radius:3px}
+.modal-foot{display:flex;justify-content:flex-end;gap:9px;padding:14px 22px;border-top:1px solid rgba(117,199,255,.12)}
+
+/* ---------- 响应式 ---------- */
+@media (max-width:1080px){
+  .parts-panel{width:266px}
+  .info-panel{width:300px}
+  .dock{width:calc(100vw - 40px)}
+}
+@media (max-width:900px){
+  .topbar{padding:14px 16px 0}
+  .brand h1{font-size:20px}
+  .brand p{font-size:8px;letter-spacing:.24em}
+  .badge{padding:6px 9px;font-size:8px}
+  .badge.alt{display:none}
+  .parts-toggle{display:block}
+  .parts-panel{top:116px;right:14px;width:270px;max-height:calc(100vh - 150px);
+    transform:translateX(calc(100% + 26px));opacity:0;pointer-events:none;transition:.28s}
+  .parts-panel.open{transform:none;opacity:1;pointer-events:auto}
+  .info-panel{left:14px;top:116px;width:min(330px,calc(100vw - 28px));max-height:46vh}
+  .dock{bottom:10px;width:calc(100vw - 20px);padding:10px 12px 8px}
+  .btn{height:35px;padding:0 10px;font-size:10.5px}
+  .dock-hint{gap:9px;font-size:8px}
+  .hud{display:none}
+  .footnote{display:none}
+}
+@media (max-width:620px){
+  .brand-mark{width:34px;height:34px}
+  .brand-mark span{top:7px;bottom:7px;width:7px}
+  .brand-mark span:first-child{left:7px}
+  .brand-mark span:last-child{right:7px}
+  .brand h1{font-size:18px}
+  .brand p{display:none}
+  .badge{letter-spacing:.1em}
+  .meta{gap:5px}
+  #btnExport,#btnAuto{display:none}
+  .dock-main{gap:6px}
+  .btn{font-size:10px;padding:0 9px;height:34px}
+  .btn svg{width:13px;height:13px}
+  .dock-hint span:nth-child(n+3){display:none}
+  .info-panel{top:104px;max-height:38vh}
+  .tooltip{display:none}
+}
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="scene"></canvas></div>
+<div class="vignette"></div>
+<div class="scanline"></div>
+<div class="top-glow"></div>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark" aria-hidden="true"><span></span><span></span></div>
+    <div>
+      <h1>iPhone <em>Duo</em></h1>
+      <p>INTERACTIVE TEARDOWN LAB</p>
+    </div>
+  </div>
+  <div class="meta">
+    <span class="badge"><i></i>MODEL · DEEPSEEK-FLASH</span>
+    <span class="badge alt"><i></i>对照组 · PROMPT v1</span>
+  </div>
+</header>
+
+<button id="partsToggle" class="parts-toggle" type="button">部件 / 25</button>
+
+<aside id="partsPanel" class="panel parts-panel" aria-label="部件清单">
+  <div class="panel-head"><span>部件清单 / PARTS</span><b>25</b></div>
+  <div id="partsList" class="parts-list"></div>
+</aside>
+
+<section id="infoPanel" class="panel info-panel" aria-live="polite">
+  <button id="ipClose" type="button" aria-label="关闭">×</button>
+  <div class="ip-top"><span id="ipCat">显示</span><span id="ipEn">INNER DISPLAY</span></div>
+  <h2 id="ipName">部件名称</h2>
+  <p id="ipSpecs" class="ip-specs"></p>
+  <p id="ipDesc" class="ip-desc"></p>
+  <div class="ip-foot">数据基线 · APPLE 2026 / IFIXIT TEARDOWN</div>
+</section>
+
+<footer class="dock">
+  <div class="dock-main">
+    <button id="btnExplode" class="btn primary" type="button">
+      <svg viewBox="0 0 24 24"><path d="M9 4H4v5M15 20h5v-5M4 9l6-6M20 15l-6 6"/></svg>
+      <span class="btn-label">整体拆解</span>
+    </button>
+    <button id="btnFold" class="btn" type="button">
+      <svg viewBox="0 0 24 24"><rect x="3" y="5" width="7" height="14" rx="1.6"/><rect x="14" y="5" width="7" height="14" rx="1.6"/></svg>
+      <span class="btn-label">折叠演示</span>
+    </button>
+    <button id="btnAuto" class="btn auto" type="button">
+      <svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7V5z"/></svg>
+      <span class="btn-label">自动演示</span>
+    </button>
+    <button id="btnReset" class="btn" type="button">
+      <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.4-5.7M20 4v5h-5"/></svg>
+      <span class="btn-label">重置视角</span>
+    </button>
+    <button id="btnExport" class="btn" type="button">
+      <svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 19h16"/></svg>
+      <span class="btn-label">导出清单</span>
+    </button>
+  </div>
+  <div class="dock-slider">
+    <label for="explodeSlider">EXPLODE</label>
+    <input id="explodeSlider" type="range" min="0" max="100" value="0" step="1" aria-label="拆解进度">
+    <b id="sliderVal">0%</b>
+  </div>
+  <div class="dock-hint">
+    <span>拖拽旋转</span><span>滚轮缩放</span><span>右键平移</span><span>点击部件拆解</span>
+    <span><kbd>SPACE</kbd> 拆解</span><span><kbd>F</kbd> 折叠</span><span><kbd>R</kbd> 复位</span>
+  </div>
+</footer>
+
+<div class="hud">
+  <div><b id="hudFps">60</b>FPS</div>
+  <div><b id="hudCount">25</b>MODULES</div>
+  <div class="state"><b id="hudState">ASSEMBLED</b>STATE</div>
+</div>
+
+<div class="footnote">
+  <b>PROCEDURAL GEOMETRY</b> · 25 PARTS / 0 ASSET FILES<br>
+  SOURCE · APPLE 2026 / IFIXIT TEARDOWN · FAN-MADE VISUALIZATION
+</div>
+
+<div id="tooltip" class="tooltip hidden"></div>
+<div id="toast"></div>
+
+<!-- 导出弹窗 -->
+<div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="拆解清单">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div>
+        <h2>拆解清单 · JSON</h2>
+        <p>GENERATED BY DEEPSEEK-FLASH · 25 MODULES · PROMPT v1</p>
+      </div>
+      <button id="modalClose" type="button" aria-label="关闭">×</button>
+    </div>
+    <pre id="modalJson"></pre>
+    <div class="modal-foot">
+      <button id="modalCopy" class="btn" type="button">复制 JSON</button>
+      <button id="modalDownload" class="btn primary" type="button">下载 .json</button>
+    </div>
+  </div>
+</div>
+
+<!-- 加载页 -->
+<div id="loading">
+  <div class="load-inner">
+    <div class="load-logo" aria-hidden="true"><span></span><span></span></div>
+    <div class="load-title">iPhone <i>Duo</i> · Teardown Lab</div>
+    <div class="load-sub">THREE.JS · PROCEDURAL · NO MODELS</div>
+    <div class="load-track"><div id="loadBar"></div></div>
+    <div class="load-row"><span id="loadStatus">正在加载渲染引擎…</span><b id="loadPct">0%</b></div>
+    <div id="loadHint">首次打开需要联网获取 Three.js;也可把 three.min.js 放入 js/lib/ 实现完全离线。</div>
+  </div>
+</div>
+
+<noscript><div style="position:fixed;inset:0;background:#03060c;color:#dff;display:flex;align-items:center;justify-content:center;z-index:999">请启用 JavaScript 以运行 3D 拆解可视化。</div></noscript>
+
+<script>
+(function () {
+  'use strict';
+  var THREE_SOURCES = [
+    'js/lib/three.min.js',
+    'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js',
+    'https://unpkg.com/three@0.128.0/build/three.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
+    'https://cdn.bootcdn.net/ajax/libs/three.js/r128/three.min.js',
+    'https://lib.baomitu.com/three.js/r128/three.min.js'
+  ];
+  var APP_FILES = ['js/data.js', 'js/textures.js', 'js/phone.js', 'js/bloom.js', 'js/controls.js', 'js/app.js'];
+  var srcIndex = 0, fileIndex = 0;
+
+  function $(id) { return document.getElementById(id); }
+  function status(pct, text) {
+    var bar = $('loadBar'), st = $('loadStatus'), pc = $('loadPct');
+    if (bar) bar.style.width = pct + '%';
+    if (st && text) st.textContent = text;
+    if (pc) pc.textContent = Math.round(pct) + '%';
+  }
+  function fail(msg) {
+    var el = $('loading');
+    if (el) el.classList.add('failed');
+    var st = $('loadStatus');
+    if (st) st.textContent = '加载失败:' + msg;
+    var pc = $('loadPct');
+    if (pc) pc.textContent = 'ERR';
+    var hint = $('loadHint');
+    if (hint) hint.innerHTML = '无法加载 Three.js。请检查网络,或下载 r128 版 three.min.js 放到 <b>js/lib/three.min.js</b> 后刷新。';
+  }
+
+  function loadApp() {
+    status(58, '加载模块 0/' + APP_FILES.length);
+    function next() {
+      if (fileIndex >= APP_FILES.length) return;
+      var src = APP_FILES[fileIndex];
+      var s = document.createElement('script');
+      s.src = src;
+      s.async = false;
+      s.onload = function () {
+        fileIndex++;
+        status(58 + fileIndex * 5, '加载模块 ' + fileIndex + '/' + APP_FILES.length);
+        next();
+      };
+      s.onerror = function () { fail(src); };
+      document.head.appendChild(s);
+    }
+    next();
+  }
+
+  function tryThree() {
+    if (srcIndex >= THREE_SOURCES.length) {
+      fail('所有 CDN 均不可用');
+      return;
+    }
+    var src = THREE_SOURCES[srcIndex++];
+    var s = document.createElement('script');
+    s.src = src;
+    s.async = false;
+    var settled = false;
+    var timer = setTimeout(function () {
+      if (settled) return;
+      settled = true;
+      s.onload = s.onerror = null;
+      if (s.parentNode) s.parentNode.removeChild(s);
+      tryThree();
+    }, src.indexOf('http') === 0 ? 7000 : 2500);
+
+    s.onload = function () {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (window.THREE) {
+        status(54, 'Three.js ' + (THREE.REVISION || '') + ' 已加载');
+        loadApp();
+      } else {
+        status(54, '引擎校验失败,重试…');
+        tryThree();
+      }
+    };
+    s.onerror = function () {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (s.parentNode) s.parentNode.removeChild(s);
+      status(20 + srcIndex * 4, '切换备用源 ' + srcIndex + '/' + THREE_SOURCES.length);
+      tryThree();
+    };
+    document.head.appendChild(s);
+  }
+
+  if (!window.WebGLRenderingContext) {
+    fail('当前浏览器不支持 WebGL');
+    return;
+  }
+  tryThree();
+})();
+</script>
+</body>
+</html>
