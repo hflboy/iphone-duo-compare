@@ -1,0 +1,28 @@
+
+> iphone-duo-compare@1.0.0 capture
+> node tools/capture.mjs
+
+node v20.20.2 · cwd /home/runner/work/iphone-duo-compare/iphone-duo-compare
+
+▶ glm-5.3
+  ✓ glm-5.3-cover.png  411 KB
+  ✓ glm-5.3-exploded.png  436 KB
+  ✓ glm-5.3-explode.gif  2422 KB  (43 帧)
+
+▶ deepseek-flash
+  ✗ deepseek-flash 失败: page.waitForSelector: Timeout 60000ms exceeded.
+Call log:
+  - waiting for locator('canvas') to be visible
+
+    at waitReady (/home/runner/work/iphone-duo-compare/iphone-duo-compare/tools/capture.mjs:109:14)
+    at captureTarget (/home/runner/work/iphone-duo-compare/iphone-duo-compare/tools/capture.mjs:157:9)
+    at async main (/home/runner/work/iphone-duo-compare/iphone-duo-compare/tools/capture.mjs:235:7)
+    提示:页面依赖 CDN 上的 Three.js,请确认网络可达;首次运行还需 npx playwright install chromium
+
+产物:
+  docs/shots/glm-5.3-cover.png  411 KB
+  docs/shots/glm-5.3-exploded.png  436 KB
+  docs/shots/glm-5.3-explode.gif  2422 KB
+  docs/shots/deepseek-flash-cover.png  (未生成)
+  docs/shots/deepseek-flash-exploded.png  (未生成)
+  docs/shots/deepseek-flash-explode.gif  (未生成)
