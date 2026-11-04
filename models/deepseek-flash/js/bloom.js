@@ -38,24 +38,27 @@
     '}'
   ].join('\n');
 
-  var COMP_FRAG = [
+  /* 合成拆成两趟(同一趟里同时采两个渲染目标,底色会被吃掉):
+   *   1) COPY  场景 → 屏幕;
+   *   2) GLOW  泛光 → 屏幕,叠加混合。
+   * 屏幕暗角/扫描线交给页面上的 .vignette / .scanline 两个 CSS 覆盖层。
+   * 注意:场景渲染进渲染目标时 three 不做 outputEncoding(见 WebGLPrograms:
+   * 有 renderTarget 时取 target.texture.encoding = Linear),所以这里直接按
+   * 线性值输出,和建模时调的明暗一致;自己再套一次 sRGB 会让整机发白。 */
+  var COPY_FRAG = [
     'uniform sampler2D tScene;',
-    'uniform sampler2D tBloom;',
-    'uniform float strength;',
-    'uniform float time;',
-    'uniform vec2 resolution;',
     'varying vec2 vUv;',
     'void main(){',
-    '  vec3 base = texture2D(tScene, vUv).rgb;',
-    '  vec3 bloom = texture2D(tBloom, vUv).rgb;',
-    '  vec3 col = base + bloom * strength;',
-    '  vec2 d = vUv - 0.5;',
-    '  float vig = smoothstep(0.92, 0.28, length(d) * 1.55);',
-    '  col *= mix(0.68, 1.0, vig);',
-    '  float grain = fract(sin(dot(vUv * resolution + time, vec2(12.9898, 78.233))) * 43758.5453);',
-    '  col += (grain - 0.5) * 0.014;',
-    '  col = max(col, vec3(0.0));',
-    '  gl_FragColor = vec4(col, 1.0);',
+    '  gl_FragColor = vec4(texture2D(tScene, vUv).rgb, 1.0);',
+    '}'
+  ].join('\n');
+
+  var GLOW_FRAG = [
+    'uniform sampler2D tBloom;',
+    'uniform float strength;',
+    'varying vec2 vUv;',
+    'void main(){',
+    '  gl_FragColor = vec4(texture2D(tBloom, vUv).rgb * strength, 1.0);',
     '}'
   ].join('\n');
 
@@ -105,18 +108,27 @@
       depthWrite: false
     });
 
-    var compMat = new THREE.ShaderMaterial({
+    var copyMat = new THREE.ShaderMaterial({
       uniforms: {
-        tScene: { value: rtScene.texture },
-        tBloom: { value: rtA.texture },
-        strength: { value: 0.95 },
-        time: { value: 0 },
-        resolution: { value: new THREE.Vector2(W, H) }
+        tScene: { value: rtScene.texture }
       },
       vertexShader: VERT,
-      fragmentShader: COMP_FRAG,
+      fragmentShader: COPY_FRAG,
       depthTest: false,
       depthWrite: false
+    });
+
+    var glowMat = new THREE.ShaderMaterial({
+      uniforms: {
+        tBloom: { value: rtA.texture },
+        strength: { value: 0.85 }
+      },
+      vertexShader: VERT,
+      fragmentShader: GLOW_FRAG,
+      depthTest: false,
+      depthWrite: false,
+      transparent: true,
+      blending: THREE.AdditiveBlending
     });
 
     function blit(mat, target) {
@@ -134,9 +146,11 @@
 
     var api = {
       rtScene: rtScene,
-      uniforms: compMat.uniforms,
-      strength: 0.95,
+      uniforms: glowMat.uniforms,
+      strength: 0.85,
       render: function (time) {
+        renderer.autoClear = false;
+
         renderer.setRenderTarget(rtScene);
         renderer.clear();
         renderer.render(scene, camera);
@@ -152,12 +166,15 @@
         blurPass(rtA, rtB, 2.6 / hw, 0);
         blurPass(rtB, rtA, 0, 2.6 / hh);
 
-        compMat.uniforms.tScene.value = rtScene.texture;
-        compMat.uniforms.tBloom.value = rtA.texture;
-        compMat.uniforms.time.value = time;
-        compMat.uniforms.strength.value = api.strength;
+        // ① 场景 → 屏幕(线性转 sRGB)
+        copyMat.uniforms.tScene.value = rtScene.texture;
+        blit(copyMat, null);
+
+        // ② 泛光叠加到屏幕(不清屏)
+        glowMat.uniforms.tBloom.value = rtA.texture;
+        glowMat.uniforms.strength.value = api.strength;
+        quad.material = glowMat;
         renderer.setRenderTarget(null);
-        renderer.clear();
         renderer.render(quadScene, quadCam);
       },
       setSize: function () {
@@ -166,7 +183,6 @@
         rtScene.setSize(w, h);
         rtA.setSize(Math.max(2, w >> 1), Math.max(2, h >> 1));
         rtB.setSize(Math.max(2, w >> 1), Math.max(2, h >> 1));
-        compMat.uniforms.resolution.value.set(w, h);
       }
     };
 

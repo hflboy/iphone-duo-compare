@@ -525,7 +525,9 @@
     } else {
       foldCurrent = foldTarget;
     }
-    foldPivot.rotation.y = easeInOutCubic(foldCurrent) * Math.PI;
+    // 负角:右半机朝观察者(+Z,内屏一侧)翻起再合上 = 内折叠;
+    // 取正角会让右半机绕到机身背后再转回来,视觉上"反着折"。
+    foldPivot.rotation.y = -easeInOutCubic(foldCurrent) * Math.PI;
 
     if (particles) particles.rotation.y += dt * 0.008;
 
