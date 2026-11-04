@@ -5,7 +5,7 @@
  * 用无头 Chromium 打开 models/ 下的每个页面,自动产出:
  *   docs/shots/<id>-cover.png     静止首屏(1440x900)
  *   docs/shots/<id>-exploded.png  100% 拆解定格
- *   docs/shots/<id>-explode.gif   0→100 拆解过程动图(800x500,循环播放)
+ *   docs/shots/<id>-explode.gif   0→100 拆解过程动图(720x450,循环播放)
  *
  * 用法:
  *   npm install
@@ -15,7 +15,7 @@
  *
  * 环境变量:
  *   CAPTURE_PORT   本地静态服务端口(默认 4173)
- *   CAPTURE_FRAMES 动图帧数(默认 28)
+ *   CAPTURE_FRAMES 动图帧数(默认 12)
  */
 import { createServer } from 'node:http';
 import { readFile, mkdir, writeFile, stat } from 'node:fs/promises';
@@ -42,7 +42,8 @@ const { GIFEncoder, quantize, applyPalette } = G;
 const ROOT = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const OUT = path.join(ROOT, 'docs', 'shots');
 const PORT = Number(process.env.CAPTURE_PORT || 4173);
-const FRAMES = Math.max(8, Number(process.env.CAPTURE_FRAMES || 28));
+// 软件渲染(SwiftShader)下每帧截图很贵,默认只用 12 帧,靠回程帧凑出循环
+const FRAMES = Math.max(6, Number(process.env.CAPTURE_FRAMES || 12));
 
 /** 每个模型页面的"就绪"判定与拆解滑杆选择器 */
 const TARGETS = [
@@ -151,6 +152,7 @@ async function captureTarget(browser, target) {
     colorScheme: 'dark',
   });
   const page = await ctx.newPage();
+  page.setDefaultTimeout(30000);
   page.on('pageerror', (e) => console.warn(`  ! pageerror: ${e.message}`));
 
   await page.goto(base, { waitUntil: 'domcontentloaded' });
@@ -173,14 +175,15 @@ async function captureTarget(browser, target) {
 
   // ---------- 2) 动图:小视口重新加载,逐帧推进拆解 ----------
   const gifCtx = await browser.newContext({
-    viewport: { width: 800, height: 500 },
+    viewport: { width: 720, height: 450 },
     deviceScaleFactor: 1,
     colorScheme: 'dark',
   });
   const gifPage = await gifCtx.newPage();
+  gifPage.setDefaultTimeout(30000);
   await gifPage.goto(base, { waitUntil: 'domcontentloaded' });
   await waitReady(gifPage, target);
-  await gifPage.waitForTimeout(2500);
+  await gifPage.waitForTimeout(2000);
 
   const steps = [];
   for (let i = 0; i <= FRAMES; i++) steps.push(Math.round((i / FRAMES) * 100));
@@ -188,6 +191,7 @@ async function captureTarget(browser, target) {
 
   const gif = GIFEncoder();
   const delay = 80; // ms/帧 → 12.5fps
+  let frameNo = 0;
   for (const pct of steps) {
     await setExplode(gifPage, target.slider, pct);
     await gifPage.waitForTimeout(delay);
@@ -196,6 +200,10 @@ async function captureTarget(browser, target) {
     const palette = quantize(data, 256, { format: 'rgb565' });
     const index = applyPalette(data, palette, 'rgb565');
     gif.writeFrame(index, width, height, { palette, delay });
+    frameNo++;
+    if (frameNo % 4 === 0 || frameNo === steps.length) {
+      console.log(`    · 帧 ${frameNo}/${steps.length}`);
+    }
   }
   gif.finish();
   const gifBuf = Buffer.from(gif.bytesView());
