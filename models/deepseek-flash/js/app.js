@@ -67,7 +67,7 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.02;
+    renderer.toneMappingExposure = 0.78;
     renderer.autoClear = true;
 
     scene = new THREE.Scene();
@@ -673,7 +673,7 @@
   function buildReport() {
     return {
       app: 'iPhone Duo · Teardown Lab',
-      model: 'DeepSeek-Flash',
+      model: 'DeepSeek-V4.1-Flash',
       prompt: 'PROMPT.md(统一提示词)',
       generatedAt: new Date().toISOString(),
       device: {
