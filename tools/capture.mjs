@@ -21,9 +21,23 @@ import { createServer } from 'node:http';
 import { readFile, mkdir, writeFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 import { chromium } from 'playwright';
-import { PNG } from 'pngjs';
-import { GIFEncoder, quantize, applyPalette } from 'gifenc';
+
+// pngjs / gifenc 都是 CJS 包,统一用 createRequire 取,避免 Node ESM 具名导出的解析差异
+const require = createRequire(import.meta.url);
+async function loadModule(name) {
+  try {
+    return require(name);
+  } catch {
+    return await import(name);
+  }
+}
+const pngjs = await loadModule('pngjs');
+const gifenc = await loadModule('gifenc');
+const PNG = pngjs.PNG || pngjs.default?.PNG;
+const G = gifenc.GIFEncoder ? gifenc : gifenc.default;
+const { GIFEncoder, quantize, applyPalette } = G;
 
 const ROOT = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const OUT = path.join(ROOT, 'docs', 'shots');
@@ -196,6 +210,7 @@ async function captureTarget(browser, target) {
 }
 
 async function main() {
+  console.log(`node ${process.version} · cwd ${process.cwd()}`);
   await mkdir(OUT, { recursive: true });
   const only = process.argv.slice(2).filter((a) => !a.startsWith('-'));
   const targets = only.length ? TARGETS.filter((t) => only.includes(t.id)) : TARGETS;
@@ -220,7 +235,7 @@ async function main() {
       await captureTarget(browser, target);
     } catch (err) {
       failed++;
-      console.error(`  ✗ ${target.id} 失败: ${err.message}`);
+      console.error(`  ✗ ${target.id} 失败: ${err.stack || err.message}`);
       console.error('    提示:页面依赖 CDN 上的 Three.js,请确认网络可达;首次运行还需 npx playwright install chromium');
     }
   }
