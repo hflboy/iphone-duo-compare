@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
     inputs:
       frames:
-        description: 动图帧数(默认 28,越小文件越小)
+        description: 动图帧数(默认 12,越小文件越小)
         required: false
-        default: "28"
+        default: "12"
   push:
     paths:
       - "models/**"
@@ -26,6 +26,8 @@ jobs:
   capture:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
+    # 软件渲染很慢,给足时间但也别无限挂着
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -50,6 +52,7 @@ jobs:
         id: cap
         continue-on-error: true
         shell: bash
+        timeout-minutes: 12
         env:
           CAPTURE_FRAMES: ${{ inputs.frames }}
         run: |
