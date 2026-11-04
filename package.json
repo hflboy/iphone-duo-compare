@@ -1,0 +1,16 @@
+{
+  "name": "iphone-duo-compare",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "同一份提示词 · 多 AI 模型生成的 iPhone Duo 3D 拆解项目对比",
+  "scripts": {
+    "serve": "node tools/serve.mjs",
+    "capture": "node tools/capture.mjs"
+  },
+  "devDependencies": {
+    "gifenc": "^1.0.3",
+    "playwright": "^1.49.0",
+    "pngjs": "^7.0.0"
+  }
+}
