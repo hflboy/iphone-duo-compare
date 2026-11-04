@@ -1,0 +1,56 @@
+name: capture-shots
+
+# 自动/手动触发:在 CI 里用无头 Chromium 重新生成 docs/shots/ 下的预览图并提交回来。
+# 本地也可以直接 `npm run capture`,效果一致。
+on:
+  workflow_dispatch:
+    inputs:
+      frames:
+        description: 动图帧数(默认 28,越小文件越小)
+        required: false
+        default: "28"
+  push:
+    paths:
+      - "models/**"
+      - "tools/capture.mjs"
+      - "package.json"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: capture-shots
+  cancel-in-progress: true
+
+jobs:
+  capture:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: Capture
+        env:
+          CAPTURE_FRAMES: ${{ inputs.frames }}
+        run: npm run capture
+
+      - name: Commit shots
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/shots
+          if git diff --staged --quiet; then
+            echo "没有变化,跳过提交"
+          else
+            git commit -m "chore(shots): refresh render previews"
+            git push
+          fi
