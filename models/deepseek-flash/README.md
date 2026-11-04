@@ -1,4 +1,4 @@
-# iPhone Duo · Teardown Lab(DeepSeek-Flash 对照组)
+# iPhone Duo · Teardown Lab(DeepSeek-V4.1-Flash 对照组)
 
 用 **Three.js + 原生 HTML/CSS/JS** 实现的 iPhone Duo 交互式 3D 拆解可视化。
 整机 25 个部件全部由代码程序化生成:没有外部模型、没有图片贴图、没有构建工具。
@@ -6,7 +6,7 @@
 > 本目录是 [同提示词多模型对比实验室](../../README.md) 的对照组之一:
 > 使用与 [`PROMPT.md`](../../PROMPT.md) **完全相同、一字未改**的提示词生成。
 >
-> - 生成模型:**DeepSeek-Flash**
+> - 生成模型:**DeepSeek-V4.1-Flash**
 > - 生成日期:2026-11-04
 > - 技术路线:Three.js r128(UMD)+ 原生 JS,零构建、零模型文件
 > - 目录:`models/deepseek-flash/`
@@ -134,7 +134,7 @@ deepseek-flash/
 ### 6. 视觉与后期
 - 深色渐变天穹 + 程序化地面网格 + 星尘 + 地面光环;
 - 程序化 “HDR 灯房” 经 `PMREMGenerator.fromScene` 烘成环境贴图,提供钛金属/玻璃反射;
-- 自研泛光:亮部阈值提取 → 半分辨率两级可分离高斯模糊 → 加性合成,附暗角与胶片颗粒;
+- 自研泛光:亮部阈值提取 → 半分辨率两级可分离高斯模糊 → 场景直出 + 泛光加性叠加(暗角/扫描线由页面 CSS 覆盖层承担);
 - 选中部件:自发光脉冲 + `EdgesGeometry` 加性描边 + 跟随点光,三个通道同时高亮。
 
 ### 7. 工程细节
@@ -186,7 +186,7 @@ deepseek-flash/
 1. **首次打开需要联网**取 Three.js;离线需手动放入 `js/lib/three.min.js`。
 2. 几何为**视觉近似**,不是 CAD 级尺寸;铰链内部凸轮、排线走向做了简化。
 3. 折叠角保留 2.7° 以避免屏幕完全贴合时穿模;折叠偏移是视觉补偿,不是真实四连杆运动学。
-4. 后期只有 bloom + 暗角 + 颗粒,没有 SSAO/景深/真实阴影,以换取移动端帧率。
+4. 后期只有 bloom + CSS 暗角/扫描线,没有 SSAO/景深/真实阴影,以换取移动端帧率。
 5. 屏幕为单张平面 + 圆角遮罩,折痕用中缝与暗线暗示,未做真实柔性弯折网格。
 
 ---
@@ -200,5 +200,5 @@ deepseek-flash/
 | `js/textures.js` | ~490 | Canvas 贴图生成 |
 | `js/phone.js` | ~650 | 程序化几何与材质 |
 | `js/controls.js` | ~200 | 轨道控制器/手势 |
-| `js/bloom.js` | ~175 | 泛光后期 |
+| `js/bloom.js` | ~190 | 泛光后期 |
 | `js/app.js` | ~820 | 场景/交互/编排/UI |
