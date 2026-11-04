@@ -13,9 +13,9 @@
 
 ### 首屏渲染对比
 
-| [![GLM-5.3-Flash 首屏](docs/shots/glm-5.3-cover.png)](https://hflboy.github.io/iphone-duo-compare/models/glm-5.3/) | [![DeepSeek-Flash 首屏](docs/shots/deepseek-flash-cover.png)](https://hflboy.github.io/iphone-duo-compare/models/deepseek-flash/) |
+| [![GLM-5.3-Flash 首屏](docs/shots/glm-5.3-cover.png)](https://hflboy.github.io/iphone-duo-compare/models/glm-5.3/) | [![DeepSeek-V4.1-Flash 首屏](docs/shots/deepseek-flash-cover.png)](https://hflboy.github.io/iphone-duo-compare/models/deepseek-flash/) |
 |:---:|:---:|
-| **GLM-5.3-Flash** · 22 部件 · 折叠联动 | **DeepSeek-Flash** · 25 部件 · 双级泛光 |
+| **GLM-5.3-Flash** · 22 部件 · 折叠联动 | **DeepSeek-V4.1-Flash** · 25 部件 · 双级泛光 |
 
 ### 拆解过程对比
 
@@ -36,7 +36,7 @@
 |---|---|
 | **并排对比页**(左右同屏交互) | https://hflboy.github.io/iphone-duo-compare/ |
 | GLM-5.3-Flash | https://hflboy.github.io/iphone-duo-compare/models/glm-5.3/ |
-| DeepSeek-Flash | https://hflboy.github.io/iphone-duo-compare/models/deepseek-flash/ |
+| DeepSeek-V4.1-Flash | https://hflboy.github.io/iphone-duo-compare/models/deepseek-flash/ |
 
 首次打开需要联网从 CDN 取 Three.js(各页面自带多级兜底);把 `three.min.js` 放进
 `models/<id>/js/lib/` 即可完全离线。
@@ -53,7 +53,8 @@ iphone-duo-compare/
 ├── package.json             预览图生成脚本依赖
 ├── upload-to-github.ps1     一键上传脚本(GitHub API,无需 git)
 ├── .github/workflows/
-│   └── capture.yml          models/ 变更或手动触发:CI 生成预览图并回提交
+│   ├── capture.yml          models/ 变更或手动触发:CI 生成预览图并回提交
+│   └── pages.yml            推 main 自动发布整站到 GitHub Pages
 ├── tools/
 │   ├── serve.mjs            本地静态服务(预览用)
 │   └── capture.mjs          无头浏览器截图 + 动图生成
@@ -63,7 +64,7 @@ iphone-duo-compare/
     │   ├── index.html
     │   ├── README.md
     │   └── js/ (partsData / phoneModel / bloom / controls / explode / main)
-    └── deepseek-flash/      ← DeepSeek-Flash 生成(对照组,完整可运行)
+    └── deepseek-flash/      ← DeepSeek-V4.1-Flash 生成(对照组,完整可运行)
         ├── index.html
         ├── README.md
         └── js/ (data / textures / phone / bloom / controls / app)
@@ -76,17 +77,17 @@ iphone-duo-compare/
 | 模型 | 状态 | 技术要点 | 亮点 | 待改进 |
 |---|---|---|---|---|
 | GLM-5.3-Flash | ✅ 可运行 | Three.js r128 UMD + 原生 JS;22 部件程序化建模;自研轨道控制器/泛光管线/拆解编排;折叠联动动画 | 零模型贴图全代码生成;真实拆解数据(2962+1921mAh 电控脱胶);自动演示模式;六级 CDN 兜底 | 首次打开需联网取 Three.js(可下载到 `js/lib/` 实现完全离线) |
-| DeepSeek-Flash | ✅ 可运行 | Three.js r128 UMD + 原生 JS;25 部件分层建模;自研轨道控制器/两级泛光;Canvas 程序化贴图;折叠厚度补偿;JSON 清单导出 | 25 个部件覆盖双屏/双电池/双摄/VC/铰链/胶条;12 张 Canvas 贴图;部件聚焦 + 呼吸高亮;拆解清单导出;六源加载兜底(本地 + 5 CDN) | 首次打开需联网取 Three.js;铰链为视觉简化运动学,保留 2.7° 折叠间隙;无真实阴影 |
+| DeepSeek-V4.1-Flash | ✅ 可运行 | Three.js r128 UMD + 原生 JS;25 部件分层建模;自研轨道控制器/两级泛光;Canvas 程序化贴图;折叠厚度补偿;JSON 清单导出 | 25 个部件覆盖双屏/双电池/双摄/VC/铰链/胶条;12 张 Canvas 贴图;部件聚焦 + 呼吸高亮;拆解清单导出;六源加载兜底(本地 + 5 CDN) | 首次打开需联网取 Three.js;铰链为视觉简化运动学,保留 2.7° 折叠间隙;无真实阴影 |
 
 ## 实验记录
 
 | 日期 | 模型 | 提示词版本 | 产物 | 备注 |
 |---|---|---|---|---|
-| 2026-11-04 | DeepSeek-Flash | [`PROMPT.md`](PROMPT.md) v1(一字未改) | [`models/deepseek-flash/`](models/deepseek-flash/) | 25 部件 / 零外部资源 / 自带拆解清单导出 |
+| 2026-11-04 | DeepSeek-V4.1-Flash | [`PROMPT.md`](PROMPT.md) v1(一字未改) | [`models/deepseek-flash/`](models/deepseek-flash/) | 25 部件 / 零外部资源 / 自带拆解清单导出 |
 
 ### 两组实现的快速对照
 
-| 维度 | GLM-5.3-Flash | DeepSeek-Flash |
+| 维度 | GLM-5.3-Flash | DeepSeek-V4.1-Flash |
 |---|---|---|
 | 部件数量 | 22 | 25 |
 | 代码组织 | 6 个 JS 模块(partsData / phoneModel / bloom / controls / explode / main) | 6 个 JS 模块(data / textures / phone / bloom / controls / app) |
@@ -119,11 +120,11 @@ npm run serve                # 本地看效果 → http://127.0.0.1:4173/
 
 ### GitHub Pages
 
-仓库是 public,站点已从 `main` 分支根目录发布(`.nojekyll` 已就位):
+仓库是 public,Pages 走 **GitHub Actions** 发布(Settings → Pages → Source = `GitHub Actions`):
 
-1. 往 `main` 推任何提交即自动重新构建,无需额外配置;
+1. 每次 push 到 `main`,`pages.yml` 会打包仓库根目录并部署,无需手动操作;
 2. 根目录 [`index.html`](index.html) 是并排对比页,`models/<id>/` 是各自的单页;
-3. 若想改成 Actions 发布,可在 Settings → Pages 把 Source 切到 `GitHub Actions` 并引入官方 workflow。
+3. 部署历史在仓库的 Actions / Deployments 里可查。
 
 > ⚠️ 站点地址按仓库 `hflboy/iphone-duo-compare` 预填;换账号或改名仓库时记得同步这几处链接。
 
