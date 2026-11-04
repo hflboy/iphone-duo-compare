@@ -2,10 +2,12 @@
 # iPhone Duo 对比实验室 · 一键上传 GitHub(API 方式,无需 git)
 #
 # 用法:cd D:\HFL\study\iphone-duo-compare 然后 .\upload-to-github.ps1
-# 上传内容:根目录 README.md / PROMPT.md / 本脚本 + models\ 下全部项目
+# 上传内容:根目录文件(README/PROMPT/index.html/package.json/本脚本)
+#           + tools\ + docs\ + .github\ + models\ 下全部项目
 # 重复运行安全(已存在文件按 sha 自动更新)
 # Token 创建:GitHub → Settings → Developer settings → Fine-grained tokens
 #   权限:Contents = Read and write;Administration = Read and write
+#        Workflows = Read and write(上传 .github/workflows/ 时必需)
 # ============================================================
 $ErrorActionPreference = 'Continue'
 $root = "D:\HFL\study\iphone-duo-compare"
@@ -32,7 +34,8 @@ try {
   Invoke-RestMethod "https://api.github.com/repos/$($me.login)/$repoName" -Headers $h | Out-Null
   Write-Host "ℹ️ 仓库已存在,将同步更新。"
 } catch {
-  $b = @{ name = $repoName; description = $repoDesc; private = $true; auto_init = $false } | ConvertTo-Json
+  # 公开仓库:免费账号也能开 GitHub Pages(私有仓库需要 Pro/Team)
+  $b = @{ name = $repoName; description = $repoDesc; private = $false; auto_init = $false } | ConvertTo-Json
   try {
     Invoke-RestMethod "https://api.github.com/user/repos" -Headers $h -Method Post -Body $b -ContentType "application/json" | Out-Null
     Write-Host "✅ 仓库已创建:https://github.com/$($me.login)/$repoName"
@@ -44,17 +47,23 @@ $base = "https://api.github.com/repos/$($me.login)/$repoName"
 
 # ---------- 4) 收集上传清单 ----------
 $jobs = New-Object System.Collections.Generic.List[object]
-foreach ($f in @("README.md", "PROMPT.md", "upload-to-github.ps1")) {
+$skip = '\\\.git\\|\\node_modules\\|\\js\\lib\\|\\package-lock\.json$'
+
+# 4.1 根目录单文件
+foreach ($f in @("README.md", "PROMPT.md", "index.html", "package.json", ".gitignore", "upload-to-github.ps1")) {
   $p = Join-Path $root $f
   if (Test-Path $p) { $jobs.Add(@{ local = $p; remote = $f }) }
 }
-$modelsDir = Join-Path $root "models"
-if (Test-Path $modelsDir) {
-  Get-ChildItem $modelsDir -Recurse -File |
-    Where-Object { $_.FullName -notmatch '\\\.git\\|\\node_modules\\|\\js\\lib\\' } |
+
+# 4.2 目录(递归,保留相对路径)
+foreach ($d in @("tools", "docs", ".github", "models")) {
+  $dir = Join-Path $root $d
+  if (-not (Test-Path $dir)) { continue }
+  Get-ChildItem $dir -Recurse -File -Force |
+    Where-Object { $_.FullName -notmatch $skip } |
     ForEach-Object {
-      $rel = $_.FullName.Substring($modelsDir.Length + 1).Replace('\', '/')
-      $jobs.Add(@{ local = $_.FullName; remote = "models/$rel" })
+      $rel = $_.FullName.Substring($root.Length + 1).Replace('\', '/')
+      $jobs.Add(@{ local = $_.FullName; remote = $rel })
     }
 }
 Write-Host "ℹ️ 共 $($jobs.Count) 个文件待同步。"
