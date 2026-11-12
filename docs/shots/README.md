@@ -8,7 +8,7 @@ README 顶部「效果预览」用的图全部由脚本生成,不要手动改文
 | `<id>-exploded.png` | 1440×900 | 100% 拆解定格,可作第二张卡片 |
 | `<id>-explode.gif` | 800×500 · 12.5fps | 拆解过程动图,README 自动播放 |
 
-`<id>` 取值:`glm-5.3`、`deepseek-flash`。
+`<id>` 取值:`glm-5.3`、`deepseek-flash`、`deepseek-codex`。
 
 ## 重新生成
 
@@ -20,8 +20,8 @@ npm run capture -- glm-5.3 # 单个
 ```
 
 生成后在本地 `npm run serve` 打开 <http://127.0.0.1:4173/> 检查,
-再提交 `docs/shots/` 即可。GitHub Actions 里也有 `capture-shots`
-工作流可以跑同样的事,见 `.github/workflows/capture.yml`。
+再提交 `docs/shots/` 即可。GitHub Actions 也有一个手动触发的
+`capture-shots` 工作流可以跑同样的事,见 `.github/workflows/capture.yml`。
 
 ## 注意
 
