@@ -23,6 +23,15 @@
 |:---:|:---:|:---:|
 | 电控脱胶把手 + 折叠联动拆解 | 双级泛光 + 折叠厚度补偿 | 多焦点拆解 + 自动巡览 |
 
+### DeepSeek-V4.1-Flash + Codex 对照组
+
+| 展开首屏 | 100% 拆解 |
+|:---:|:---:|
+| [![DeepSeek + Codex 展开首屏](docs/shots/deepseek-codex-cover.png)](https://hflboy.github.io/iphone-duo-compare/models/deepseek-codex/) | [![DeepSeek + Codex 拆解定格](docs/shots/deepseek-codex-exploded.png)](https://hflboy.github.io/iphone-duo-compare/models/deepseek-codex/) |
+
+新对照组采用 15 部件程序化建模，提供部件点击拆出、双击聚焦、进度滑杆、自动巡览与折叠演示。
+折叠时左右机身围绕水滴铰链联动，内屏随之对折，外屏最终朝外，形成可直接操作的完整折叠状态。
+
 > **为什么 README 里只能放图,不能直接跑 3D?**
 > GitHub 会对 README 的 HTML 做白名单过滤:`<script>` / `<iframe>` / `<style>` 全被剔除,
 > 所以交互式 Three.js 只能在真正的网页里跑。预览走「静态图 + 动图 + 跳转」组合,

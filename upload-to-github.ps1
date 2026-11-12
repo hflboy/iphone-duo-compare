@@ -77,7 +77,7 @@ foreach ($file in @('README.md', 'PROMPT.md', 'index.html', 'package.json', '.gi
   }
 }
 
-foreach ($dirName in @('tools', 'docs', '.github', 'models')) {
+foreach ($dirName in @('tools', 'docs', '.github', 'models', 'vendor')) {
   $dir = Join-Path $root $dirName
   if (-not (Test-Path $dir)) { continue }
   Get-ChildItem $dir -Recurse -File -Force |
@@ -90,35 +90,72 @@ foreach ($dirName in @('tools', 'docs', '.github', 'models')) {
 
 Write-Host "[INFO] $($jobs.Count) files to sync."
 
-# ---------- 5) Upload files ----------
-$failed = 0
+# ---------- 5) Create blobs, then commit once ----------
+$headSha = $null
+$baseTree = $null
+try {
+  $ref = Invoke-RestMethod "$base/git/ref/heads/main" -Headers $h
+  $headSha = $ref.object.sha
+  $headCommit = Invoke-RestMethod "$base/git/commits/$headSha" -Headers $h
+  $baseTree = $headCommit.tree.sha
+} catch {
+  Write-Host "[INFO] main does not exist yet; creating the initial commit."
+}
+
+$treeItems = New-Object System.Collections.Generic.List[object]
 foreach ($job in $jobs) {
-  $relative = $job.remote
-  $encoded = [uri]::EscapeDataString($relative).Replace('%2F', '/')
-  $sha = $null
-  try {
-    $sha = (Invoke-RestMethod "$base/contents/$encoded" -Headers $h).sha
-  } catch {}
-
-  $payload = @{
-    message = "sync: $relative"
+  $blobBody = @{
     content = [Convert]::ToBase64String([System.IO.File]::ReadAllBytes($job.local))
-    branch = 'main'
-  }
-  if ($sha) { $payload.sha = $sha }
-
+    encoding = 'base64'
+  } | ConvertTo-Json
   try {
-    Invoke-RestMethod "$base/contents/$encoded" -Headers $h -Method Put -Body ($payload | ConvertTo-Json) -ContentType 'application/json' | Out-Null
-    Write-Host "  [OK] $relative"
+    $blob = Invoke-RestMethod "$base/git/blobs" -Headers $h -Method Post -Body $blobBody -ContentType 'application/json'
+    $treeItems.Add(@{
+      path = $job.remote
+      mode = '100644'
+      type = 'blob'
+      sha = $blob.sha
+    })
+    Write-Host "  [OK] blob $($job.remote)"
   } catch {
-    $failed++
-    Write-Host "  [FAIL] $relative :: $($_.Exception.Message)"
+    Write-Host "[ERROR] Blob upload failed: $($job.remote) :: $($_.Exception.Message)"
+    return
   }
 }
 
-if ($failed -gt 0) {
-  Write-Host "[WARN] Sync finished with $failed failed file(s)."
-} else {
-  Write-Host "[DONE] https://github.com/$user/$repoName"
+$treeBody = @{ tree = $treeItems }
+if ($baseTree) { $treeBody.base_tree = $baseTree }
+try {
+  $tree = Invoke-RestMethod "$base/git/trees" -Headers $h -Method Post -Body ($treeBody | ConvertTo-Json -Depth 6) -ContentType 'application/json'
+} catch {
+  Write-Host "[ERROR] Tree creation failed: $($_.Exception.Message)"
+  return
 }
+
+$commitBody = @{
+  message = "sync: DeepSeek-V4.1-Flash + Codex comparison"
+  tree = $tree.sha
+}
+if ($headSha) { $commitBody.parents = @($headSha) }
+try {
+  $commit = Invoke-RestMethod "$base/git/commits" -Headers $h -Method Post -Body ($commitBody | ConvertTo-Json -Depth 5) -ContentType 'application/json'
+} catch {
+  Write-Host "[ERROR] Commit creation failed: $($_.Exception.Message)"
+  return
+}
+
+try {
+  if ($headSha) {
+    $refBody = @{ sha = $commit.sha; force = $false } | ConvertTo-Json
+    Invoke-RestMethod "$base/git/refs/heads/main" -Headers $h -Method Patch -Body $refBody -ContentType 'application/json' | Out-Null
+  } else {
+    $refBody = @{ ref = 'refs/heads/main'; sha = $commit.sha } | ConvertTo-Json
+    Invoke-RestMethod "$base/git/refs" -Headers $h -Method Post -Body $refBody -ContentType 'application/json' | Out-Null
+  }
+  Write-Host "[DONE] One commit pushed: https://github.com/$user/$repoName/commit/$($commit.sha)"
+} catch {
+  Write-Host "[ERROR] Updating main failed: $($_.Exception.Message)"
+  return
+}
+
 Write-Host "[SECURITY] Revoke the token used for this upload when finished."
