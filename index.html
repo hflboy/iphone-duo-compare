@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>iPhone Duo · 双模型并排对比</title>
+<title>iPhone Duo · 模型并排对比</title>
 <style>
   :root{
     --bg:#05070c; --panel:#0b1119; --line:rgba(120,170,255,.18);
@@ -57,11 +57,12 @@
   <header>
     <div class="brand">
       <h1>iPhone <b>Duo</b> · 并排对比</h1>
-      <p>同一份提示词,两套独立实现 —— 左右同时交互,直接比手感与画面</p>
+      <p>同一份提示词,多套独立实现 —— 左右同时交互,直接比手感与画面</p>
     </div>
     <nav class="actions">
       <a href="models/glm-5.3/" target="_blank" rel="noopener">GLM-5.3 全屏 ↗</a>
-      <a href="models/deepseek-flash/" target="_blank" rel="noopener">DeepSeek V4.1 全屏 ↗</a>
+      <a href="models/deepseek-codex/" target="_blank" rel="noopener">DeepSeek + Codex 全屏 ↗</a>
+      <a href="models/deepseek-flash/" target="_blank" rel="noopener">DeepSeek 原版</a>
       <a href="README.md">项目说明</a>
     </nav>
   </header>
@@ -79,11 +80,11 @@
 
     <section>
       <div class="pane-head">
-        <span class="name"><i class="dot" style="color:#3fe6ff;background:#3fe6ff"></i>DeepSeek-V4.1-Flash</span>
-        <span class="meta">25 部件 · 双级泛光 · 清单导出</span>
-        <a href="models/deepseek-flash/" target="_blank" rel="noopener">新窗口 ↗</a>
+        <span class="name"><i class="dot" style="color:#3fe6ff;background:#3fe6ff"></i>DeepSeek-V4.1-Flash + Codex</span>
+        <span class="meta">15 部件 · 水滴铰链 · 自动巡览</span>
+        <a href="models/deepseek-codex/" target="_blank" rel="noopener">新窗口 ↗</a>
       </div>
-      <iframe src="models/deepseek-flash/index.html" title="DeepSeek-V4.1-Flash 实现" loading="lazy"
+      <iframe src="models/deepseek-codex/index.html" title="DeepSeek-V4.1-Flash + Codex 实现" loading="lazy"
               allow="fullscreen" referrerpolicy="no-referrer"></iframe>
     </section>
   </main>
