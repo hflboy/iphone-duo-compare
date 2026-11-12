@@ -59,8 +59,9 @@ jobs:
           set -o pipefail
           npm run capture 2>&1 | tee /tmp/capture.log
 
+      # 即使只有部分模型截图成功,也把已产出的图提交上去
       - name: Commit shots
-        if: steps.cap.outcome == 'success'
+        if: always()
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
