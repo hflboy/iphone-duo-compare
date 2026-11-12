@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#05080d">
+<title>iPhone Duo · Fold Lab</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --ink: #eef8ff;
+    --muted: #7890a5;
+    --line: rgba(120, 196, 230, .17);
+    --panel: rgba(7, 15, 23, .78);
+    --cyan: #53e8ff;
+    --lime: #b8ff71;
+    --amber: #ffb75e;
+  }
+  * { box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+  body {
+    background:
+      radial-gradient(circle at 52% 34%, rgba(22, 68, 91, .34), transparent 34%),
+      radial-gradient(circle at 78% 78%, rgba(68, 91, 42, .13), transparent 28%),
+      #05080d;
+    color: var(--ink);
+    font-family: "Bahnschrift", "Aptos", "PingFang SC", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input { font: inherit; }
+  button { color: inherit; }
+  #app { position: fixed; inset: 0; }
+  #stage { position: absolute; inset: 0; }
+  #stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  .grain {
+    position: fixed; inset: 0; pointer-events: none; z-index: 2; opacity: .24;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.88' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.18'/%3E%3C/svg%3E");
+    mix-blend-mode: soft-light;
+  }
+  .scan {
+    position: fixed; inset: 0; pointer-events: none; z-index: 2;
+    background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(92, 218, 255, .012) 4px);
+  }
+  header {
+    position: fixed; inset: 0 0 auto; z-index: 5; display: flex; align-items: flex-start;
+    justify-content: space-between; gap: 24px; padding: 24px 28px; pointer-events: none;
+  }
+  .identity, .telemetry, .part-card, .dock, .legend { pointer-events: auto; }
+  .eyebrow {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 9px;
+    color: var(--cyan); font: 600 10px/1.2 Consolas, monospace; letter-spacing: .2em; text-transform: uppercase;
+  }
+  .eyebrow::before { content: ""; width: 24px; height: 1px; background: var(--cyan); box-shadow: 0 0 12px var(--cyan); }
+  h1 { margin: 0; font-size: clamp(25px, 3vw, 44px); line-height: .95; font-weight: 500; letter-spacing: -.045em; }
+  h1 b { color: var(--cyan); font-weight: 700; }
+  .subtitle { margin-top: 10px; color: var(--muted); font-size: 11px; letter-spacing: .07em; }
+  .tag {
+    display: inline-flex; align-items: center; gap: 7px; margin-top: 14px; padding: 7px 10px;
+    border: 1px solid var(--line); border-radius: 4px; background: rgba(4, 10, 15, .64);
+    color: #b8ccdc; font: 10px/1 Consolas, monospace; letter-spacing: .06em;
+  }
+  .tag i { width: 5px; height: 5px; border-radius: 50%; background: var(--lime); box-shadow: 0 0 9px var(--lime); }
+  .telemetry {
+    width: 176px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 5px;
+    background: linear-gradient(145deg, rgba(10, 22, 32, .76), rgba(4, 9, 14, .58));
+    backdrop-filter: blur(12px); font: 10px/1.65 Consolas, monospace;
+  }
+  .telemetry .row { display: flex; justify-content: space-between; gap: 18px; color: var(--muted); }
+  .telemetry .row strong { color: #dff6ff; font-weight: 500; }
+  .telemetry .bar { height: 2px; margin-top: 9px; overflow: hidden; background: rgba(255,255,255,.07); }
+  .telemetry .bar span { display: block; width: 34%; height: 100%; background: var(--cyan); box-shadow: 0 0 10px var(--cyan); animation: scanbar 3.2s ease-in-out infinite; }
+  @keyframes scanbar { 0%,100% { transform: translateX(-100%); } 55% { transform: translateX(300%); } }
+  .legend {
+    position: fixed; left: 28px; top: 180px; z-index: 5; width: 164px;
+    display: grid; gap: 5px;
+  }
+  .legend-title { margin-bottom: 5px; color: var(--muted); font: 9px/1 Consolas, monospace; letter-spacing: .18em; }
+  .legend button {
+    position: relative; width: 100%; text-align: left; padding: 8px 9px 8px 24px;
+    border: 1px solid transparent; border-radius: 4px; background: transparent; cursor: pointer;
+    color: #8ea4b6; font-size: 10px; letter-spacing: .03em; transition: .2s;
+  }
+  .legend button::before {
+    content: ""; position: absolute; left: 9px; top: 50%; width: 7px; height: 1px;
+    background: #456576; transition: .2s;
+  }
+  .legend button:hover, .legend button.active {
+    border-color: var(--line); color: #eafaff; background: rgba(38, 95, 116, .15);
+  }
+  .legend button:hover::before, .legend button.active::before { width: 10px; background: var(--cyan); box-shadow: 0 0 9px var(--cyan); }
+  .part-card {
+    position: fixed; z-index: 5; right: 28px; top: 188px; width: 236px;
+    padding: 17px; border: 1px solid var(--line); border-radius: 6px;
+    background: linear-gradient(150deg, rgba(9, 21, 31, .84), rgba(4, 10, 15, .68));
+    backdrop-filter: blur(16px); transform: translateX(12px); opacity: 0; transition: .3s;
+  }
+  .part-card.show { transform: none; opacity: 1; }
+  .part-card .index { color: var(--cyan); font: 9px/1 Consolas, monospace; letter-spacing: .16em; }
+  .part-card h2 { margin: 9px 0 7px; font-size: 17px; font-weight: 500; }
+  .part-card p { margin: 0; color: #8fa6b7; font-size: 11px; line-height: 1.75; }
+  .specs { display: grid; gap: 1px; margin-top: 14px; background: var(--line); }
+  .specs div { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; background: #08121b; font: 10px/1.2 Consolas, monospace; }
+  .specs span { color: var(--muted); }
+  .specs b { color: #d9f8ff; font-weight: 500; text-align: right; }
+  .dock {
+    position: fixed; z-index: 6; left: 50%; bottom: 24px; width: min(680px, calc(100vw - 48px));
+    transform: translateX(-50%); padding: 11px; border: 1px solid var(--line); border-radius: 7px;
+    background: rgba(5, 12, 18, .82); backdrop-filter: blur(18px);
+    box-shadow: 0 20px 60px rgba(0,0,0,.34);
+  }
+  .dock-top { display: flex; align-items: center; gap: 8px; }
+  .dock button {
+    height: 33px; padding: 0 12px; border: 1px solid rgba(131, 185, 210, .16); border-radius: 4px;
+    background: rgba(255,255,255,.025); cursor: pointer; color: #94aabd; font-size: 10px;
+    letter-spacing: .04em; white-space: nowrap; transition: .18s;
+  }
+  .dock button:hover { border-color: rgba(83,232,255,.48); color: #effcff; background: rgba(39, 98, 119, .17); }
+  .dock button.primary { margin-left: auto; color: #031017; background: var(--cyan); border-color: var(--cyan); font-weight: 700; }
+  .dock button.primary:hover { box-shadow: 0 0 24px rgba(83,232,255,.26); transform: translateY(-1px); }
+  .range-wrap { display: grid; grid-template-columns: 58px 1fr 38px; align-items: center; gap: 12px; margin-top: 10px; }
+  .range-wrap label, .range-wrap output { color: #738b9e; font: 9px/1 Consolas, monospace; letter-spacing: .09em; }
+  .range-wrap output { color: var(--cyan); text-align: right; }
+  input[type="range"] {
+    width: 100%; height: 3px; margin: 0; appearance: none; border-radius: 9px; outline: none;
+    background: linear-gradient(90deg, var(--cyan) 0 var(--fill, 0%), rgba(255,255,255,.09) var(--fill, 0%));
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    width: 12px; height: 12px; appearance: none; border: 2px solid #061018; border-radius: 50%;
+    background: var(--cyan); box-shadow: 0 0 12px rgba(83,232,255,.65); cursor: pointer;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 9px; height: 9px; border: 2px solid #061018; border-radius: 50%;
+    background: var(--cyan); box-shadow: 0 0 12px rgba(83,232,255,.65); cursor: pointer;
+  }
+  .hint {
+    position: fixed; z-index: 4; left: 50%; bottom: 116px; transform: translateX(-50%);
+    color: #60798c; font: 9px/1 Consolas, monospace; letter-spacing: .08em; pointer-events: none;
+  }
+  #loading {
+    position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: #05080d;
+    transition: opacity .55s ease, visibility .55s;
+  }
+  #loading.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+  .loader { width: min(280px, 70vw); }
+  .loader-head { display: flex; align-items: center; justify-content: space-between; color: #b7eef8; font: 10px/1 Consolas, monospace; letter-spacing: .14em; }
+  .loader-line { height: 1px; margin-top: 12px; overflow: hidden; background: rgba(255,255,255,.1); }
+  .loader-line i { display: block; width: 0; height: 100%; background: var(--cyan); box-shadow: 0 0 12px var(--cyan); transition: width .35s; }
+  .loader small { display: block; margin-top: 10px; color: #506475; font: 9px/1.6 Consolas, monospace; }
+  .toast {
+    position: fixed; z-index: 9; left: 50%; bottom: 150px; transform: translate(-50%, 8px);
+    padding: 8px 11px; border: 1px solid var(--line); border-radius: 4px;
+    background: rgba(5, 13, 19, .88); color: #b9d2df; font: 10px/1.4 Consolas, monospace;
+    opacity: 0; pointer-events: none; transition: .25s;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  @media (max-width: 860px) {
+    header { padding: 16px; }
+    .telemetry { display: none; }
+    .legend { left: 14px; top: 126px; width: 132px; }
+    .legend button { padding-top: 6px; padding-bottom: 6px; font-size: 9px; }
+    .part-card { top: auto; right: 14px; bottom: 142px; width: min(220px, calc(100vw - 28px)); }
+    .part-card p { max-height: 48px; overflow: hidden; }
+    .dock { bottom: 12px; width: calc(100vw - 24px); }
+    .dock-top { overflow-x: auto; scrollbar-width: none; }
+    .dock-top::-webkit-scrollbar { display: none; }
+    .dock button.primary { margin-left: 0; }
+    .hint { display: none; }
+  }
+  @media (max-width: 560px) {
+    .legend { display: none; }
+    h1 { font-size: 24px; }
+    .subtitle { max-width: 250px; line-height: 1.45; }
+    .part-card { bottom: 136px; }
+  }
+</style>
+</head>
+<body>
+  <div id="app">
+    <div id="stage" aria-label="iPhone Duo 三维拆解视图"></div>
+    <div class="grain"></div>
+    <div class="scan"></div>
+
+    <header>
+      <div class="identity">
+        <div class="eyebrow">Teardown sequence / 02</div>
+        <h1>iPhone <b>Duo</b><br>Fold Lab</h1>
+        <div class="subtitle">交互式结构拆解与双屏折叠研究</div>
+        <div class="tag"><i></i> DeepSeek-V4.1-Flash + Codex · PROMPT v1</div>
+      </div>
+      <div class="telemetry">
+        <div class="row"><span>MODEL</span><strong>DUO-A</strong></div>
+        <div class="row"><span>PARTS</span><strong>15</strong></div>
+        <div class="row"><span>STATE</span><strong id="stateText">OPEN</strong></div>
+        <div class="bar"><span></span></div>
+      </div>
+    </header>
+
+    <aside class="legend" aria-label="核心部件">
+      <div class="legend-title">QUICK ACCESS</div>
+      <button data-part="inner-screen">01 内屏</button>
+      <button data-part="battery-left">02 双电池</button>
+      <button data-part="camera">03 相机组</button>
+      <button data-part="logic-board">04 主板</button>
+      <button data-part="hinge">05 铰链</button>
+      <button data-part="outer-screen">06 外屏</button>
+    </aside>
+
+    <aside class="part-card" id="partCard">
+      <div class="index" id="partIndex">PART 00 / 15</div>
+      <h2 id="partName">展开整机</h2>
+      <p id="partDesc">拖动旋转，滚轮缩放。点击任意部件可单独拆出并查看结构说明。</p>
+      <div class="specs" id="partSpecs"></div>
+    </aside>
+
+    <div class="hint">拖拽旋转 · 滚轮缩放 · 双击聚焦 · 空格整体拆解 · F 折叠</div>
+
+    <div class="dock">
+      <div class="dock-top">
+        <button id="explodeBtn" class="primary">整体拆解</button>
+        <button id="foldBtn">折叠演示</button>
+        <button id="autoBtn">自动巡览</button>
+        <button id="resetBtn">复位</button>
+        <button id="clearBtn">清除选择</button>
+      </div>
+      <div class="range-wrap">
+        <label for="explodeRange">EXPLODE</label>
+        <input id="explodeRange" type="range" min="0" max="100" value="0" aria-label="拆解进度">
+        <output id="explodeValue">000%</output>
+      </div>
+    </div>
+    <div class="toast" id="toast" role="status"></div>
+  </div>
+
+  <div id="loading">
+    <div class="loader">
+      <div class="loader-head"><span>INITIALIZING</span><span id="loadPercent">0%</span></div>
+      <div class="loader-line"><i id="loadBar"></i></div>
+      <small id="loadNote">正在载入三维渲染引擎</small>
+    </div>
+  </div>
+
+<script>
+(function () {
+  var sources = [
+    'js/lib/three.min.js',
+    'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js',
+    'https://unpkg.com/three@0.128.0/build/three.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'
+  ];
+  var bar = document.getElementById('loadBar');
+  var percent = document.getElementById('loadPercent');
+  var note = document.getElementById('loadNote');
+  var index = 0;
+
+  function progress(value, text) {
+    bar.style.width = value + '%';
+    percent.textContent = value + '%';
+    if (text) note.textContent = text;
+  }
+
+  function loadNext() {
+    if (index >= sources.length) {
+      note.textContent = 'Three.js 载入失败，请检查网络后刷新';
+      return;
+    }
+    progress(Math.min(70, 18 + index * 17), '正在载入 Three.js · 节点 ' + (index + 1));
+    var script = document.createElement('script');
+    script.src = sources[index++];
+    script.onload = boot;
+    script.onerror = loadNext;
+    document.head.appendChild(script);
+  }
+
+  function boot() {
+    progress(82, '正在构建零部件');
+    var app = document.createElement('script');
+    app.src = 'js/main.js';
+    app.onload = function () {
+      progress(100, 'READY');
+      setTimeout(function () { document.getElementById('loading').classList.add('hidden'); }, 180);
+    };
+    app.onerror = function () { note.textContent = '应用脚本载入失败'; };
+    document.body.appendChild(app);
+  }
+
+  loadNext();
+}());
+</script>
+</body>
+</html>
