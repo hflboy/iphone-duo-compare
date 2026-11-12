@@ -1,51 +1,27 @@
 name: pages
 
-# 把仓库根目录直接发布成静态站点:
-#   /                        → 双模型并排对比页
-#   /models/glm-5.3/         → GLM 实现
-#   /models/deepseek-flash/  → DeepSeek 实现
+# 说明:本仓库的 GitHub Pages 目前由 main 分支根目录直接发布
+# (Settings → Pages → Deploy from a branch → main / root,.nojekyll 已就位),
+# 所以推送到 main 就会自动重建站点,不需要这个工作流。
 #
-# 前提:Settings → Pages → Source 选 "GitHub Actions"。
+# 若以后想改成 Actions 发布:
+#   1. Settings → Pages → Source 切到 "GitHub Actions";
+#   2. 把下面的步骤替换成官方三件套:
+#        actions/configure-pages@v5
+#        actions/upload-pages-artifact@v3   (path: .)
+#        actions/deploy-pages@v4
+#   3. 给本工作流加 push 触发器与 pages/id-token 权限。
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: false
 
 jobs:
-  deploy:
+  info:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Diagnose Pages config
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Explain
         run: |
-          echo "--- pages config ---"
-          curl -sS -H "Authorization: Bearer $GH_TOKEN" \
-               -H "Accept: application/vnd.github+json" \
-               "https://api.github.com/repos/${{ github.repository }}/pages" || true
-          echo
-
-      - uses: actions/configure-pages@v5
-
-      - name: Upload site
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: .
-
-      - name: Deploy
-        id: deploy
-        uses: actions/deploy-pages@v4
+          echo "Pages 通过 main 分支发布,无需本工作流。"
+          echo "站点: https://hflboy.github.io/iphone-duo-compare/"
