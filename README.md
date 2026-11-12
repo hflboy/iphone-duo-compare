@@ -3,7 +3,7 @@
 用**同一份提示词**([PROMPT.md](PROMPT.md))让不同 AI 模型各自生成
 「iPhone Duo 交互式 3D 拆解可视化」,汇总在同一仓库做横向对比。
 
-`可运行 2/2` · `预览图自动生成` · `GitHub Pages 在线体验`
+`可运行 3/3` · `预览图自动生成` · `GitHub Pages 在线体验`
 
 ---
 
@@ -13,15 +13,15 @@
 
 ### 首屏渲染对比
 
-| [![GLM-5.3-Flash 首屏](docs/shots/glm-5.3-cover.png)](https://hflboy.github.io/iphone-duo-compare/models/glm-5.3/) | [![DeepSeek-V4.1-Flash 首屏](docs/shots/deepseek-flash-cover.png)](https://hflboy.github.io/iphone-duo-compare/models/deepseek-flash/) |
-|:---:|:---:|
-| **GLM-5.3-Flash** · 22 部件 · 折叠联动 | **DeepSeek-V4.1-Flash** · 25 部件 · 双级泛光 |
+| [![GLM-5.3-Flash 首屏](docs/shots/glm-5.3-cover.png)](https://hflboy.github.io/iphone-duo-compare/models/glm-5.3/) | [![DeepSeek-V4.1-Flash 首屏](docs/shots/deepseek-flash-cover.png)](https://hflboy.github.io/iphone-duo-compare/models/deepseek-flash/) | [![DeepSeek + Codex 首屏](docs/shots/deepseek-codex-cover.png)](https://hflboy.github.io/iphone-duo-compare/models/deepseek-codex/) |
+|:---:|:---:|:---:|
+| **GLM-5.3-Flash** · 22 部件 · 折叠联动 | **DeepSeek-V4.1-Flash** · 25 部件 · 双级泛光 | **DeepSeek + Codex** · 15 部件 · 水滴铰链 |
 
 ### 拆解过程对比
 
-| [![GLM 拆解动图](docs/shots/glm-5.3-explode.gif)](https://hflboy.github.io/iphone-duo-compare/models/glm-5.3/) | [![DeepSeek 拆解动图](docs/shots/deepseek-flash-explode.gif)](https://hflboy.github.io/iphone-duo-compare/models/deepseek-flash/) |
-|:---:|:---:|
-| 电控脱胶把手 + 折叠联动拆解 | 双级泛光 + 折叠厚度补偿 |
+| [![GLM 拆解动图](docs/shots/glm-5.3-explode.gif)](https://hflboy.github.io/iphone-duo-compare/models/glm-5.3/) | [![DeepSeek 拆解动图](docs/shots/deepseek-flash-explode.gif)](https://hflboy.github.io/iphone-duo-compare/models/deepseek-flash/) | [![DeepSeek + Codex 拆解动图](docs/shots/deepseek-codex-explode.gif)](https://hflboy.github.io/iphone-duo-compare/models/deepseek-codex/) |
+|:---:|:---:|:---:|
+| 电控脱胶把手 + 折叠联动拆解 | 双级泛光 + 折叠厚度补偿 | 多焦点拆解 + 自动巡览 |
 
 > **为什么 README 里只能放图,不能直接跑 3D?**
 > GitHub 会对 README 的 HTML 做白名单过滤:`<script>` / `<iframe>` / `<style>` 全被剔除,
@@ -37,6 +37,7 @@
 | **并排对比页**(左右同屏交互) | https://hflboy.github.io/iphone-duo-compare/ |
 | GLM-5.3-Flash | https://hflboy.github.io/iphone-duo-compare/models/glm-5.3/ |
 | DeepSeek-V4.1-Flash | https://hflboy.github.io/iphone-duo-compare/models/deepseek-flash/ |
+| DeepSeek-V4.1-Flash + Codex | https://hflboy.github.io/iphone-duo-compare/models/deepseek-codex/ |
 
 首次打开需要联网从 CDN 取 Three.js(各页面自带多级兜底);把 `three.min.js` 放进
 `models/<id>/js/lib/` 即可完全离线。
@@ -64,10 +65,14 @@ iphone-duo-compare/
     │   ├── index.html
     │   ├── README.md
     │   └── js/ (partsData / phoneModel / bloom / controls / explode / main)
-    └── deepseek-flash/      ← DeepSeek-V4.1-Flash 生成(对照组,完整可运行)
+    ├── deepseek-flash/      ← DeepSeek-V4.1-Flash 基础版(完整可运行)
+    │   ├── index.html
+    │   ├── README.md
+    │   └── js/ (data / textures / phone / bloom / controls / app)
+    └── deepseek-codex/      ← DeepSeek-V4.1-Flash + Codex 对照组
         ├── index.html
         ├── README.md
-        └── js/ (data / textures / phone / bloom / controls / app)
+        └── js/main.js
 ```
 
 ---
@@ -78,26 +83,27 @@ iphone-duo-compare/
 |---|---|---|---|---|
 | GLM-5.3-Flash | ✅ 可运行 | Three.js r128 UMD + 原生 JS;22 部件程序化建模;自研轨道控制器/泛光管线/拆解编排;折叠联动动画 | 零模型贴图全代码生成;真实拆解数据(2962+1921mAh 电控脱胶);自动演示模式;六级 CDN 兜底 | 首次打开需联网取 Three.js(可下载到 `js/lib/` 实现完全离线) |
 | DeepSeek-V4.1-Flash | ✅ 可运行 | Three.js r128 UMD + 原生 JS;25 部件分层建模;自研轨道控制器/两级泛光;Canvas 程序化贴图;折叠厚度补偿;JSON 清单导出 | 25 个部件覆盖双屏/双电池/双摄/VC/铰链/胶条;12 张 Canvas 贴图;部件聚焦 + 呼吸高亮;拆解清单导出;六源加载兜底(本地 + 5 CDN) | 首次打开需联网取 Three.js;铰链为视觉简化运动学,保留 2.7° 折叠间隙;无真实阴影 |
+| DeepSeek-V4.1-Flash + Codex | ✅ 可运行 | Three.js r128 UMD + 原生 JS;15 部件程序化建模;程序化屏幕/PCB/电池贴图;单文件交互控制器;折叠与自动巡览状态机 | 部件点击拆出与相机聚焦;双电池独立拆解;折叠后外屏朝外;自动巡览、进度滑杆与快捷键;三级 CDN 兜底 | 部件数量较少;首次打开需联网取 Three.js |
 
 ## 实验记录
 
 | 日期 | 模型 | 提示词版本 | 产物 | 备注 |
 |---|---|---|---|---|
 | 2026-11-04 | DeepSeek-V4.1-Flash | [`PROMPT.md`](PROMPT.md) v1(一字未改) | [`models/deepseek-flash/`](models/deepseek-flash/) | 25 部件 / 零外部资源 / 自带拆解清单导出 |
+| 2026-11-12 | DeepSeek-V4.1-Flash + Codex | [`PROMPT.md`](PROMPT.md) v1(一字未改) | [`models/deepseek-codex/`](models/deepseek-codex/) | 15 部件 / 程序化贴图 / 自动巡览 |
 
-### 两组实现的快速对照
+### 三组实现的快速对照
 
-| 维度 | GLM-5.3-Flash | DeepSeek-V4.1-Flash |
-|---|---|---|
-| 部件数量 | 22 | 25 |
-| 代码组织 | 6 个 JS 模块(partsData / phoneModel / bloom / controls / explode / main) | 6 个 JS 模块(data / textures / phone / bloom / controls / app) |
-| 屏幕与折叠 | 内屏分半 + 折叠联动拆解 | 内屏分半 + 折叠厚度补偿 + 折叠时整机重新居中 |
-| 高亮方式 | 自发光脉冲 + 描边 + 泛光 | 自发光脉冲 + 描边 + 跟随点光 + 泛光 |
-| 交互面板 | 左侧部件列表 + 右侧信息卡 | 右侧分组部件清单 + 左侧信息卡 + 底部控制坞 |
-| 附加功能 | 自动演示、折叠演示、进度滑杆 | 自动演示、折叠演示、进度滑杆、JSON 拆解清单导出 |
-| 离线能力 | 需联网取 Three.js(可放 `js/lib/`) | 需联网取 Three.js(可放 `js/lib/`) |
+| 维度 | GLM-5.3-Flash | DeepSeek-V4.1-Flash | DeepSeek + Codex |
+|---|---|---|---|
+| 部件数量 | 22 | 25 | 15 |
+| 代码组织 | 6 个 JS 模块 | 6 个 JS 模块 | 单文件应用脚本 |
+| 屏幕与折叠 | 内屏分半 + 折叠联动拆解 | 内屏分半 + 折叠厚度补偿 | 整块内屏 + 水滴铰链 + 折叠外屏朝外 |
+| 高亮方式 | 自发光脉冲 + 描边 + 泛光 | 自发光脉冲 + 描边 + 点光 + 泛光 | 自发光脉冲 + 部件聚焦 |
+| 交互面板 | 左侧列表 + 右侧信息卡 | 右侧清单 + 左侧信息卡 | 左侧快捷列表 + 右侧信息卡 |
+| 附加功能 | 自动演示、折叠演示、进度滑杆 | 自动演示、折叠演示、JSON 导出 | 自动巡览、折叠演示、双击聚焦 |
 
-> 两个项目均由各自模型在**同一份提示词**下独立生成,未共享实现代码;
+> 三个项目均由各自模型在**同一份提示词**下独立生成,未共享实现代码;
 > 本表只做客观罗列,评分请按 [`PROMPT.md`](PROMPT.md) 的评测维度自行横向体验。
 
 ---
