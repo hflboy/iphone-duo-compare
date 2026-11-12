@@ -5,7 +5,7 @@
  * 用无头 Chromium 打开 models/ 下的每个页面,自动产出:
  *   docs/shots/<id>-cover.png     静止首屏(1440x900)
  *   docs/shots/<id>-exploded.png  100% 拆解定格
- *   docs/shots/<id>-explode.gif   0→100 拆解过程动图(720x450,循环播放)
+ *   docs/shots/<id>-explode.gif   0→100 拆解过程动图(800x500,循环播放)
  *
  * 用法:
  *   npm install
@@ -15,7 +15,7 @@
  *
  * 环境变量:
  *   CAPTURE_PORT   本地静态服务端口(默认 4173)
- *   CAPTURE_FRAMES 动图帧数(默认 12)
+ *   CAPTURE_FRAMES 动图帧数(默认 28)
  */
 import { createServer } from 'node:http';
 import { readFile, mkdir, writeFile, stat } from 'node:fs/promises';
@@ -58,6 +58,13 @@ const TARGETS = [
     id: 'deepseek-flash',
     entry: '/models/deepseek-flash/index.html',
     slider: '#explodeSlider',
+    loader: '#loading',
+    readyClass: 'hidden',
+  },
+  {
+    id: 'deepseek-codex',
+    entry: '/models/deepseek-codex/index.html',
+    slider: '#explodeRange',
     loader: '#loading',
     readyClass: 'hidden',
   },
@@ -218,7 +225,6 @@ async function captureTarget(browser, target) {
 }
 
 async function main() {
-  console.log(`node ${process.version} · cwd ${process.cwd()}`);
   await mkdir(OUT, { recursive: true });
   const only = process.argv.slice(2).filter((a) => !a.startsWith('-'));
   const targets = only.length ? TARGETS.filter((t) => only.includes(t.id)) : TARGETS;
@@ -243,7 +249,7 @@ async function main() {
       await captureTarget(browser, target);
     } catch (err) {
       failed++;
-      console.error(`  ✗ ${target.id} 失败: ${err.stack || err.message}`);
+      console.error(`  ✗ ${target.id} 失败: ${err.message}`);
       console.error('    提示:页面依赖 CDN 上的 Three.js,请确认网络可达;首次运行还需 npx playwright install chromium');
     }
   }
