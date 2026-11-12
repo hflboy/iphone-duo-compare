@@ -396,7 +396,14 @@
   }
 
   function roundedPlane(w, h, r, mat) {
-    var mesh = new T.Mesh(new T.ShapeGeometry(roundedShape(w, h, r), 12), mat);
+    var geometry = new T.ShapeGeometry(roundedShape(w, h, r), 12);
+    var position = geometry.attributes.position;
+    var uv = [];
+    for (var i = 0; i < position.count; i++) {
+      uv.push((position.getX(i) + w / 2) / w, (position.getY(i) + h / 2) / h);
+    }
+    geometry.setAttribute('uv', new T.Float32BufferAttribute(uv, 2));
+    var mesh = new T.Mesh(geometry, mat);
     mesh.receiveShadow = true;
     return mesh;
   }
@@ -444,6 +451,11 @@
         mat.userData.registered = true;
         part.materials.push(mat);
         if (mat.emissive) part.baseEmissive.push(mat.emissiveIntensity || 0);
+        if (part.fadeOnExplode) {
+          mat.transparent = true;
+          mat.opacity = 1;
+          mat.depthWrite = true;
+        }
       });
     });
   }
@@ -498,7 +510,8 @@
   }
 
   function addInnerScreen() {
-    var part = makePart('inner-screen', model, [0, 0, .34], [0, 0, 1], 2.2, .02);
+    var part = makePart('inner-screen', model, [0, 0, .34], [-.08, 1, .12], 7.2, .02);
+    part.fadeOnExplode = true;
     var mat = new T.MeshStandardMaterial({
       map: innerScreenTexture(),
       roughness: .18,
@@ -533,6 +546,7 @@
 
   function addOuterScreen() {
     var part = makePart('outer-screen', rightRoot, [3.38, 0, -.43], [0, 0, -1], 2.15, .05);
+    part.fadeOnExplode = true;
     var mat = new T.MeshStandardMaterial({
       map: outerScreenTexture(),
       roughness: .17,
@@ -558,7 +572,7 @@
   }
 
   function addBattery(id, parent, x, width, height, tex) {
-    var part = makePart(id, parent, [x, -1.34, -.02], [x < 0 ? -.35 : .35, -.15, .65], .8, .12);
+    var part = makePart(id, parent, [x, -1.34, -.02], [x < 0 ? -.35 : .35, -.15, .65], 2.25, .12);
     var sideMat = new T.MeshStandardMaterial({ color: 0x899496, metalness: .2, roughness: .62 });
     var battery = roundedBoard(width, height, .28, .28, sideMat);
     part.group.add(battery);
@@ -583,7 +597,7 @@
   }
 
   function addLogicBoard() {
-    var part = makePart('logic-board', leftRoot, [3.7, 3.35, -.26], [0, .2, 1], 1.25, .18);
+    var part = makePart('logic-board', leftRoot, [3.7, 3.35, -.26], [0, .2, 1], 2.15, .18);
     var pcbMat = new T.MeshStandardMaterial({ color: 0x173c31, metalness: .34, roughness: .66 });
     var board = roundedBoard(3.78, 4.35, .2, .18, pcbMat);
     part.group.add(board);
@@ -612,7 +626,7 @@
   }
 
   function addCamera() {
-    var part = makePart('camera', rightRoot, [4.18, 3.92, -.53], [0, .15, -1.35], 1.05, .2);
+    var part = makePart('camera', rightRoot, [4.18, 3.92, -.53], [0, .15, 1], 2.35, .2);
     var islandMat = metal(0x8e989b, .3);
     var island = roundedBoard(2.78, 3.55, .62, .24, islandMat);
     island.rotation.y = Math.PI;
@@ -645,7 +659,7 @@
   }
 
   function addTaptic() {
-    var part = makePart('taptic', leftRoot, [4.55, -5.85, -.1], [.1, -.35, 1], .72, .23);
+    var part = makePart('taptic', leftRoot, [4.55, -5.85, -.1], [.1, -.35, 1], 1.8, .23);
     var taptic = roundedBoard(1.4, 1.25, .22, .22, metal(0x8e999b, .32));
     part.group.add(taptic);
     var coilMat = new T.MeshStandardMaterial({ color: 0x242c2f, metalness: .76, roughness: .3 });
@@ -656,7 +670,7 @@
   }
 
   function addUSB() {
-    var part = makePart('usb-core', rightRoot, [3.35, -7.36, .18], [0, -1, .35], .85, .24);
+    var part = makePart('usb-core', rightRoot, [3.35, -7.36, .18], [0, -1, .35], 1.55, .24);
     var portMat = metal(0x9aa5a7, .24);
     var port = roundedBoard(1.15, .38, .16, .22, portMat);
     port.rotation.x = Math.PI / 2;
@@ -668,7 +682,7 @@
   }
 
   function addESIM() {
-    var part = makePart('esim', rightRoot, [4.7, 5.55, -.12], [0, .45, .75], .8, .26);
+    var part = makePart('esim', rightRoot, [4.7, 5.55, -.12], [0, .45, .75], 1.65, .26);
     var board = roundedBoard(1.04, .78, .12, .09, new T.MeshStandardMaterial({
       color: 0x263634,
       metalness: .35,
@@ -682,7 +696,7 @@
   }
 
   function addMagSafe() {
-    var part = makePart('magsafe', rightRoot, [4.25, -1.1, -.54], [0, 0, -1], .72, .28);
+    var part = makePart('magsafe', rightRoot, [4.25, -1.1, -.54], [0, 0, 1], 1.9, .28);
     var coilMat = new T.MeshStandardMaterial({ color: 0x8d6b4e, metalness: .75, roughness: .28 });
     for (var i = 0; i < 7; i++) {
       var ring = new T.Mesh(new T.TorusGeometry(.7 + i * .18, .035, 7, 50), coilMat);
@@ -693,7 +707,7 @@
   }
 
   function addSpeaker(id, parent, x, y, dir) {
-    var part = makePart(id, parent, [x, y, -.12], dir, .72, .3);
+    var part = makePart(id, parent, [x, y, -.12], dir, 1.55, .3);
     var body = roundedBoard(1.22, .56, .17, .14, metal(0x687477, .36));
     part.group.add(body);
     var grilleMat = new T.MeshStandardMaterial({ color: 0x101719, metalness: .5, roughness: .55 });
@@ -943,6 +957,14 @@
       part.group.position.copy(part.home).addScaledVector(part.dir, part.distance * eased + selectedLift);
       var highlight = selectedId === part.id ? 1 : (hoverId === part.id ? .34 : .08 * explodeCurrent);
       var pulse = .62 + Math.sin(time * 3.8) * .18;
+      var fade = part.fadeOnExplode
+        ? Math.max(.13, 1 - Math.max(0, explodeCurrent - .42) / .58 * .87)
+        : 1;
+      part.materials.forEach(function (mat) {
+        if (!part.fadeOnExplode) return;
+        mat.opacity = fade;
+        mat.depthWrite = fade > .96;
+      });
       applySelection(part, highlight, pulse);
     });
   }

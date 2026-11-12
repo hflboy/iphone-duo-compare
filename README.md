@@ -137,7 +137,7 @@ npm run serve                # 本地看效果 → http://127.0.0.1:4173/
 
 仓库是 public,Pages 走 **GitHub Actions** 发布(Settings → Pages → Source = `GitHub Actions`):
 
-1. 每次 push 到 `main`,`pages.yml` 会打包仓库根目录并部署,无需手动操作;
+1. 每次 push 到 `main`,`.github/workflows/pages.yml` 会打包仓库根目录并自动部署;
 2. 根目录 [`index.html`](index.html) 是并排对比页,`models/<id>/` 是各自的单页;
 3. 部署历史在仓库的 Actions / Deployments 里可查。
 

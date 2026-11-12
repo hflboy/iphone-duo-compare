@@ -1,27 +1,35 @@
 name: pages
 
-# 说明:本仓库的 GitHub Pages 目前由 main 分支根目录直接发布
-# (Settings → Pages → Deploy from a branch → main / root,.nojekyll 已就位),
-# 所以推送到 main 就会自动重建站点,不需要这个工作流。
-#
-# 若以后想改成 Actions 发布:
-#   1. Settings → Pages → Source 切到 "GitHub Actions";
-#   2. 把下面的步骤替换成官方三件套:
-#        actions/configure-pages@v5
-#        actions/upload-pages-artifact@v3   (path: .)
-#        actions/deploy-pages@v4
-#   3. 给本工作流加 push 触发器与 pages/id-token 权限。
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
-  info:
+  deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - name: Explain
-        run: |
-          echo "Pages 通过 main 分支发布,无需本工作流。"
-          echo "站点: https://hflboy.github.io/iphone-duo-compare/"
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy
+        id: deploy
+        uses: actions/deploy-pages@v4

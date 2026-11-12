@@ -71,7 +71,7 @@
   .telemetry .bar span { display: block; width: 34%; height: 100%; background: var(--cyan); box-shadow: 0 0 10px var(--cyan); animation: scanbar 3.2s ease-in-out infinite; }
   @keyframes scanbar { 0%,100% { transform: translateX(-100%); } 55% { transform: translateX(300%); } }
   .legend {
-    position: fixed; left: 28px; top: 180px; z-index: 5; width: 164px;
+    position: fixed; left: 28px; top: 220px; z-index: 5; width: 164px;
     display: grid; gap: 5px;
   }
   .legend-title { margin-bottom: 5px; color: var(--muted); font: 9px/1 Consolas, monospace; letter-spacing: .18em; }
@@ -156,7 +156,7 @@
   @media (max-width: 860px) {
     header { padding: 16px; }
     .telemetry { display: none; }
-    .legend { left: 14px; top: 126px; width: 132px; }
+    .legend { left: 14px; top: 154px; width: 132px; }
     .legend button { padding-top: 6px; padding-bottom: 6px; font-size: 9px; }
     .part-card { top: auto; right: 14px; bottom: 142px; width: min(220px, calc(100vw - 28px)); }
     .part-card p { max-height: 48px; overflow: hidden; }
